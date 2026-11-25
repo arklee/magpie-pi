@@ -9,7 +9,8 @@
 4. [x] Nested tools through Pi's executor with per-observation scoping; other tools hidden from
    the model while `exec` is active and listed in its description.
 5. [x] `apply_patch` ported from pi-apply-patch, usable directly and from cells.
-6. [x] `/codex-exec on|off|status`, `--codex-exec` flag.
+6. [x] `/codex-exec on|off|auto|status`, `--codex-exec` flag; the setting is saved in
+   `codex-exec-pi.json` under Pi's agent directory, otherwise the mode follows OpenAI providers.
 7. [x] Unit tests, VM runtime tests, Pi SDK end-to-end test with the faux model, loader test.
 8. [ ] `quickjs` backend (see docs/development.md).
 9. [ ] Real GPT/Codex model sessions and interactive TUI rendering checks.
@@ -24,7 +25,7 @@
 
 ## Verification
 
-- `npm test`: 42 tests, including VM runtime and Pi SDK end-to-end tests (Node 26.13.1).
+- `npm test`: 49 tests, including VM runtime and Pi SDK end-to-end tests (Node 26.13.1).
 - Loader test against the installed Pi 1.6.0: passed.
 - `npm run typecheck`: passed (entry point; `.mjs` files are not strictly checked).
 - Under Bun 1.4.5 the vm backend runs cells; a 32 MiB heap limit was not enforced.

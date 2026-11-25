@@ -31,18 +31,17 @@ Turn the mode on in a session:
 This activates `exec`, `wait` and `apply_patch` and deactivates `edit` and `write`. While `exec` is
 active, every other active tool is hidden from the model and listed in the `exec` description as
 `tools.<name>(...)`. `/codex-exec off` restores `edit` and `write`; `/codex-exec status` shows
-the state.
+the state and what decided it.
 
-To start every session in this mode, run `pi --codex-exec`, or add the tools in Pi's
-`settings.json`:
+By default the mode follows the model: it turns on for `openai` and `openai-codex` models and off
+for others, including when you switch models in a session. `/codex-exec on` and `/codex-exec off`
+are remembered for later sessions in `~/.pi/agent/codex-exec-pi.json` (`{ "enabled": true }`), and
+then apply to every model; `/codex-exec auto` forgets the setting and follows the model again.
+`pi --codex-exec` turns the mode on for that run regardless.
 
-```json
-{
-  "defaultTools": ["+exec", "+wait", "+apply_patch", "-edit", "-write"]
-}
-```
-
-To use only `apply_patch`, enable it alone: `"defaultTools": ["+apply_patch"]`.
+The mode overrides `exec`/`wait` in Pi's `defaultTools`; use the commands above instead. To use
+only `apply_patch`, enable it alone with `"defaultTools": ["+apply_patch"]` and
+`/codex-exec off`.
 
 ## What cells can do
 

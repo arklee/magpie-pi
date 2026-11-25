@@ -1,6 +1,6 @@
 // End-to-end: the extension inside a real Pi SDK session, driven by Pi's scripted faux model.
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -14,10 +14,20 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import extension from "../extension/index.ts";
 
-async function createSession(t, responses) {
+const ACTIVE = ["exec", "wait", "apply_patch", "edit", "write"];
+const modeTools = (session) => session.getActiveToolNames().filter((name) => ACTIVE.includes(name)).sort();
+
+async function createSession(t, responses, { provider = "faux", config } = {}) {
 	const dir = await mkdtemp(path.join(os.tmpdir(), "codex-exec-sdk-"));
 	const agentDir = path.join(dir, "agent");
-	const faux = fauxProvider({ provider: "faux", models: [{ id: "model" }] });
+	// The extension keeps its setting under Pi's agent directory; never touch the real one.
+	const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+	process.env.PI_CODING_AGENT_DIR = agentDir;
+	if (config !== undefined) {
+		await mkdir(agentDir, { recursive: true });
+		await writeFile(path.join(agentDir, "codex-exec-pi.json"), JSON.stringify(config));
+	}
+	const faux = fauxProvider({ provider, models: [{ id: "model" }] });
 	const contexts = [];
 	faux.setResponses(
 		responses.map((respond) => (context) => {
@@ -27,7 +37,12 @@ async function createSession(t, responses) {
 	);
 	const modelRuntime = await ModelRuntime.create({ authPath: path.join(dir, "auth.json"), modelsPath: path.join(dir, "models.json") });
 	modelRuntime.registerNativeProvider(faux.provider);
-	await modelRuntime.setRuntimeApiKey("faux", "test");
+	await modelRuntime.setRuntimeApiKey(provider, "test");
+	const codex = fauxProvider({ provider: "openai-codex", models: [{ id: "codex" }] });
+	if (provider !== "openai-codex") {
+		modelRuntime.registerNativeProvider(codex.provider);
+		await modelRuntime.setRuntimeApiKey("openai-codex", "test");
+	}
 	const resourceLoader = new DefaultResourceLoader({ cwd: dir, agentDir, extensionFactories: [extension], noExtensions: true });
 	await resourceLoader.reload();
 	const { session } = await createAgentSession({
@@ -42,9 +57,11 @@ async function createSession(t, responses) {
 	await session.bindExtensions({});
 	t.after(async () => {
 		session.dispose();
+		if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
 		await rm(dir, { recursive: true, force: true });
 	});
-	return { session, dir, contexts };
+	return { session, dir, agentDir, contexts, faux, codex };
 }
 
 function toolResults(session) {
@@ -129,4 +146,42 @@ test("apply_patch works as a direct tool without exec mode", { timeout: 60_000 }
 	assert.equal(await readFile(path.join(dir, "notes/hello.txt"), "utf8"), "hello from a cell\n");
 	assert.equal(results[1].isError, true);
 	assert.match(results[1].text, /^apply_patch failed\.\nFailed:\n- missing\.txt \(update\): ENOENT/);
+});
+
+const savedConfig = async (agentDir) => JSON.parse(await readFile(path.join(agentDir, "codex-exec-pi.json"), "utf8"));
+
+test("without a saved setting the mode follows the model's provider", { timeout: 60_000 }, async (t) => {
+	const other = await createSession(t, []);
+	assert.deepEqual(modeTools(other.session), ["edit", "write"]);
+	for (const provider of ["openai", "openai-codex"]) {
+		const { session } = await createSession(t, [], { provider });
+		assert.deepEqual(modeTools(session), ["apply_patch", "exec", "wait"], provider);
+	}
+});
+
+test("/codex-exec on, off and auto are saved and restored in the next session", { timeout: 60_000 }, async (t) => {
+	const { session, agentDir } = await createSession(t, []);
+	await session.prompt("/codex-exec on");
+	assert.deepEqual(await savedConfig(agentDir), { enabled: true });
+	await session.prompt("/codex-exec auto");
+	assert.deepEqual(await savedConfig(agentDir), {});
+	assert.deepEqual(modeTools(session), ["edit", "write"]);
+
+	const saved = await createSession(t, [], { config: { enabled: true } });
+	assert.deepEqual(modeTools(saved.session), ["apply_patch", "exec", "wait"]);
+	const off = await createSession(t, [], { provider: "openai", config: { enabled: false } });
+	assert.deepEqual(modeTools(off.session), ["edit", "write"]);
+	await off.session.prompt("/codex-exec auto");
+	assert.deepEqual(modeTools(off.session), ["apply_patch", "exec", "wait"]);
+});
+
+test("switching to an OpenAI model turns the mode on, and back off, unless a setting is saved", { timeout: 60_000 }, async (t) => {
+	const { session, faux, codex } = await createSession(t, []);
+	await session.setModel(codex.getModel());
+	assert.deepEqual(modeTools(session), ["apply_patch", "exec", "wait"]);
+	await session.setModel(faux.getModel());
+	assert.deepEqual(modeTools(session), ["edit", "write"]);
+	await session.prompt("/codex-exec off");
+	await session.setModel(codex.getModel());
+	assert.deepEqual(modeTools(session), ["edit", "write"]);
 });

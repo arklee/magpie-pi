@@ -30,17 +30,15 @@ pi-codex-conversion，或 pi-apply-patch。
 
 这会启用 `exec`、`wait` 和 `apply_patch`，并停用 `edit` 和 `write`。`exec` 启用期间，其他所有
 已启用的工具都对模型隐藏，改为以 `tools.<name>(...)` 的形式列在 `exec` 的说明中。
-`/codex-exec off` 会恢复 `edit` 和 `write`；`/codex-exec status` 显示当前状态。
+`/codex-exec off` 会恢复 `edit` 和 `write`；`/codex-exec status` 显示当前状态及其来由。
 
-若希望每个会话都以此模式启动，可以运行 `pi --codex-exec`，或在 Pi 的 `settings.json` 中加入：
+默认情况下，该模式跟随模型：使用 `openai` 和 `openai-codex` 的模型时开启，其他模型时关闭，
+会话中切换模型时也会随之切换。`/codex-exec on` 和 `/codex-exec off` 会被记住，保存在
+`~/.pi/agent/codex-exec-pi.json`（`{ "enabled": true }`）中，之后对所有模型生效；
+`/codex-exec auto` 清除该设置，重新跟随模型。`pi --codex-exec` 则在本次运行中强制开启。
 
-```json
-{
-  "defaultTools": ["+exec", "+wait", "+apply_patch", "-edit", "-write"]
-}
-```
-
-只想使用 `apply_patch` 时，单独启用它即可：`"defaultTools": ["+apply_patch"]`。
+该模式会覆盖 Pi `defaultTools` 中的 `exec`/`wait`，请改用上述命令。只想使用 `apply_patch` 时，
+用 `"defaultTools": ["+apply_patch"]` 单独启用它，并执行一次 `/codex-exec off`。
 
 ## cell 能做什么
 

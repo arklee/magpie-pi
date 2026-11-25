@@ -16,6 +16,7 @@ and `apply_patch`. Read `README.md`, `PLAN.md` and `docs/development.md` before 
 
 - `extension/index.ts`: Pi integration. Registers `exec`, `wait`, `apply_patch`, the
   `/codex-exec` command and the `--codex-exec` flag; owns session lifecycle.
+- `extension/config.mjs`: saved `/codex-exec` setting and the flag/setting/provider precedence.
 - `extension/cells.mjs`: cell lifecycle, buffered output, yielding, nested-call scoping.
 - `extension/catalog.mjs`: exec/wait descriptions and the nested tool listing.
 - `extension/source.mjs`: `// @exec:` options line and the exec grammar.

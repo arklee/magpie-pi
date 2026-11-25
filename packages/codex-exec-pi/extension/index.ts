@@ -4,7 +4,8 @@ import type {
 	ExtensionToolContext,
 	ToolLoadout,
 } from "@earendil-works/pi-coding-agent";
-import { withFileMutationQueue } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, withFileMutationQueue } from "@earendil-works/pi-coding-agent";
+import path from "node:path";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import {
@@ -25,6 +26,7 @@ import {
 	WAIT_DESCRIPTION,
 } from "./catalog.mjs";
 import { CellManager } from "./cells.mjs";
+import { CONFIG_FILE, loadConfig, resolveEnabled, saveEnabled } from "./config.mjs";
 import {
 	DEFAULT_EXEC_YIELD_MS,
 	DEFAULT_MAX_OUTPUT_TOKENS,
@@ -197,22 +199,42 @@ export default function codexExec(pi: ExtensionAPI) {
 		pi.setActiveTools([...new Set([...active, ...EDIT_TOOLS])]);
 		await manager?.terminateAll();
 	};
+	const configPath = () => path.join(getAgentDir(), CONFIG_FILE);
+	const desired = async (provider: string | undefined) => {
+		const config = await loadConfig(configPath());
+		return { ...resolveEnabled({ flag: pi.getFlag(FLAG) === true, saved: config.enabled, provider }), error: config.error };
+	};
+	/** Brings the mode to the flag, the saved setting or the model's default. */
+	const apply = async (ctx: ExtensionContext, provider: string | undefined) => {
+		const { enabled, error } = await desired(provider);
+		if (error) ctx.ui.notify(`codex-exec: ${error}; following the model instead`, "warning");
+		if (enabled && !isOn()) enable();
+		else if (!enabled && isOn()) await disable();
+	};
 
 	pi.registerFlag(FLAG, { description: "Start with Codex-style exec mode enabled", type: "boolean", default: false });
 
 	pi.registerCommand("codex-exec", {
-		description: "Turn Codex-style exec mode on or off, or show its status",
+		description: "Turn Codex-style exec mode on, off or back to auto, or show its status",
 		getArgumentCompletions: (prefix: string) => {
-			const items = ["on", "off", "status"].filter((value) => value.startsWith(prefix)).map((value) => ({ value, label: value }));
+			const items = ["on", "off", "auto", "status"].filter((value) => value.startsWith(prefix)).map((value) => ({ value, label: value }));
 			return items.length > 0 ? items : null;
 		},
 		handler: async (args, ctx) => {
 			const action = args.trim() || "status";
-			if (action === "on") enable();
-			else if (action === "off") await disable();
-			else if (action !== "status") {
-				ctx.ui.notify("Usage: /codex-exec on | off | status", "warning");
+			if (!["on", "off", "auto", "status"].includes(action)) {
+				ctx.ui.notify("Usage: /codex-exec on | off | auto | status", "warning");
 				return;
+			}
+			if (action !== "status") {
+				try {
+					await saveEnabled(configPath(), action === "auto" ? undefined : action === "on");
+				} catch (error) {
+					ctx.ui.notify(`codex-exec: setting not saved: ${error instanceof Error ? error.message : String(error)}`, "warning");
+				}
+				if (action === "on") enable();
+				else if (action === "off") await disable();
+				else await apply(ctx, ctx.model?.provider);
 			}
 			let backend = backendKind;
 			try {
@@ -220,16 +242,20 @@ export default function codexExec(pi: ExtensionAPI) {
 			} catch (error) {
 				backend = `invalid (${error instanceof Error ? error.message : String(error)})`;
 			}
+			const { reason } = await desired(ctx.model?.provider);
 			const running = manager?.liveCells ?? [];
 			ctx.ui.notify(
-				`Codex exec mode is ${isOn() ? "on" : "off"}; backend ${backend}; ${running.length} running cell(s)${running.length ? `: ${running.join(", ")}` : ""}`,
+				`Codex exec mode is ${isOn() ? "on" : "off"} (${reason}); backend ${backend}; ${running.length} running cell(s)${running.length ? `: ${running.join(", ")}` : ""}`,
 				"info",
 			);
 		},
 	});
 
-	pi.on("session_start", async () => {
-		if (pi.getFlag(FLAG) === true && !isOn()) enable();
+	pi.on("session_start", async (_event, ctx) => {
+		await apply(ctx, ctx.model?.provider);
+	});
+	pi.on("model_select", async (event, ctx) => {
+		if (event.model.provider !== event.previousModel?.provider) await apply(ctx, event.model.provider);
 	});
 	// Cells belong to the conversation branch that started them.
 	pi.on("session_tree", async () => {
