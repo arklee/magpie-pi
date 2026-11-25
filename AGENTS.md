@@ -102,6 +102,12 @@ separate from mocked-menu and fixture tests.
 
 ## Repository hygiene
 
+Keep both READMEs focused on installation, basic usage, configuration, and licensing.
+Put source-build, testing, npm packaging, protocol/lifecycle, and detailed compatibility
+notes in `docs/development.md`, this file, or PLAN.md rather than the user README.
+Retain concise user-facing trust and unverified-service notices without duplicating
+the developer compatibility matrix. See `docs/development.md` for build/release steps.
+
 Keep `bin/`, `node_modules`, credentials and machine-specific configuration out of
 commits. The local `node_modules` may be a symlink to Pi's installation.
 Update README/PLAN when supported scope or workflows change. Do not publish,
