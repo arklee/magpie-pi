@@ -15,7 +15,7 @@ pi install npm:magpie-pi
 pi
 ```
 
-The npm package includes prebuilt supervisor binaries: **no Go installation or build command is needed**. Bun is still required at runtime (locally tested with 1.3.14).
+The npm package includes prebuilt supervisor binaries: **no Go installation or build command is needed**. Bun is required to run configured community plugins (tested with 1.3.14), not to load the extension or open its plugin manager.
 
 ## Usage
 

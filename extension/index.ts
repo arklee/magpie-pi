@@ -3,8 +3,8 @@ import {fileURLToPath} from "node:url";
 import path from "node:path";
 import os from "node:os";
 import type {ExtensionAPI} from "@earendil-works/pi-coding-agent";
-import * as completions from "@earendil-works/pi-ai/api/openai-completions";
-import * as anthropic from "@earendil-works/pi-ai/api/anthropic-messages";
+// The Pi extension loader exposes the compat entry, not the per-API subpaths.
+import {openAICompletionsApi,anthropicMessagesApi} from "@earendil-works/pi-ai/compat";
 import {Bridge} from "./bridge.mjs";
 import {supervisorPath} from "./platform.mjs";
 import {registerPlugins,PluginManager} from "./plugins.mjs";
@@ -43,6 +43,8 @@ export default async function(pi:ExtensionAPI){
  const initialized=await bridge.call("init",{plugins:config.plugins,config:config.opencode || {},authPath:path.join(state,"plugin-auth.json"),directory:state});
  for(const p of initialized.plugins)if(p.error)throw new Error(p.error);
  const rows=await bridge.call("providers");
+ const completions=openAICompletionsApi();
+ const anthropic=anthropicMessagesApi();
  for(const initial of rows){
   let row=initial;
   const id="magpie-"+row.id;
