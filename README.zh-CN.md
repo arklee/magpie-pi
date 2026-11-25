@@ -12,17 +12,25 @@
 
 需要 Pi **1.6.0**、Bun（本机测试 1.3.14）、Node.js 和 npm（用于管理社区插件）。
 
-npm 包尚未发布。目前请使用本地源码，先完成下方的[从源码构建](#从源码构建)，再安装并启动 Pi：
+推荐安装已发布的 npm 包（包含预编译 Go 二进制，无需安装 Go）：
 
 ```sh
-pi install /absolute/path/magpie-pi
+pi install npm:magpie-pi
 pi
 ```
 
-请将路径替换为你的项目目录。如果不想安装，也可以仅本次加载：
+也可以通过 GitHub 安装：
 
 ```sh
-pi -e /absolute/path/magpie-pi/extension/index.ts
+pi install git:github.com/arklee/magpie-pi
+```
+
+GitHub 源码不包含 Go 二进制。启动 Pi 前，请通过 `pi list` 找到安装的源码目录，在该目录执行 `node scripts/build.mjs`（需要 Go 1.23+，见[从源码构建](#从源码构建)）。更新 Go 源码后需重新构建。
+
+如果不想安装，也可以仅本次加载 npm 包：
+
+```sh
+pi -e npm:magpie-pi
 ```
 
 临时加载时，每次重启仍需带上 `-e`。
@@ -125,9 +133,9 @@ node scripts/build.mjs --all
 Go 当前没有单独单元测试；主要行为由实际编译二进制集成测试覆盖。
 全平台产物在 bin/；部署时保留平台专用文件名，例如 magpie-pi-linux-amd64 和 magpie-pi-windows-arm64.exe，扩展会自动选择对应二进制。保留 vendor/ 和 extension/。本地构建还会生成旧的 magpie-pi / magpie-pi.exe 别名，供集成测试使用。
 
-### npm 打包准备
+### npm 打包
 
-发布文件白名单包含 extension/、vendor/、bin/、抽取清单和中英文 README。打包前执行 `node scripts/build.mjs --all`，以包含六个平台的二进制。包用户需要 Bun 和兼容版本的 Pi，无需 Go。目前仅验证了 Linux 运行行为；这些打包调整不代表已经发布 npm 包。
+包已发布到 npm，包名为 `magpie-pi`。发布文件白名单包含 extension/、vendor/、bin/、抽取清单和中英文 README。打包前执行 `node scripts/build.mjs --all`，以包含六个平台的二进制。包用户需要 Bun 和兼容版本的 Pi，无需 Go。目前仅验证了 Linux 运行行为。
 
 项目自身许可证暂标为 `UNLICENSED`，公开发布前应明确分发许可。抽取的 host 继续保留 vendor/LICENSE 中的上游 MIT 许可证。
 

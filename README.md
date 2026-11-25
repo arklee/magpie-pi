@@ -12,17 +12,25 @@ Uses Pi's native SDK over stdio—no HTTP gateway or Pi core fork.
 
 Requires Pi **1.6.0**, Bun (locally tested with 1.3.14), Node.js, and npm for community plugin management.
 
-The npm package has not been published yet. For now, use a local checkout and complete [Build from source](#build-from-source) below, then install and start Pi:
+Install the published npm package (recommended; includes prebuilt Go binaries, so Go is not required):
 
 ```sh
-pi install /absolute/path/magpie-pi
+pi install npm:magpie-pi
 pi
 ```
 
-Replace the path with your checkout. To load the extension for one session without installing:
+Alternatively, install from GitHub:
 
 ```sh
-pi -e /absolute/path/magpie-pi/extension/index.ts
+pi install git:github.com/arklee/magpie-pi
+```
+
+The GitHub source does not include Go binaries. Before starting Pi, locate the installed checkout with `pi list` and run `node scripts/build.mjs` from that directory (requires Go 1.23+; see [Build from source](#build-from-source)). Rebuild after updating Go source.
+
+To try the npm package for one session without installing:
+
+```sh
+pi -e npm:magpie-pi
 ```
 
 With temporary loading, include `-e` again after each restart.
@@ -125,9 +133,9 @@ Tests use temporary state directories and local fixtures, requiring neither real
 Go currently has no standalone unit tests; its main behavior is covered by integration tests using the compiled binary.
 Cross-platform artifacts are in `bin/`. Keep their platform-specific names, such as `magpie-pi-linux-amd64` and `magpie-pi-windows-arm64.exe`; the extension selects the matching binary automatically. Retain `vendor/` and `extension/`. A local build also creates the legacy `magpie-pi` / `magpie-pi.exe` alias for integration tests.
 
-### npm packaging preparation
+### npm packaging
 
-The package whitelist includes `extension/`, `vendor/`, `bin/`, the extraction manifest, and both READMEs. Run `node scripts/build.mjs --all` before packaging to include all six platform binaries. Package users need Bun and compatible Pi, but not Go. Only Linux runtime behavior has been verified. These packaging changes do not mean the package has been published.
+The package is published on npm as `magpie-pi`. The package whitelist includes `extension/`, `vendor/`, `bin/`, the extraction manifest, and both READMEs. Run `node scripts/build.mjs --all` before packaging to include all six platform binaries. Package users need Bun and compatible Pi, but not Go. Only Linux runtime behavior has been verified.
 
 The project's own license is currently `UNLICENSED`; choose an explicit distribution license before public release. The extracted host retains its upstream MIT license in `vendor/LICENSE`.
 
