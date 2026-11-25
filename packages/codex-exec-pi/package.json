@@ -1,0 +1,43 @@
+{
+  "name": "codex-exec-pi",
+  "version": "0.1.0",
+  "description": "Codex-style exec/wait code mode and apply_patch for Pi, without native binaries",
+  "license": "UNLICENSED",
+  "keywords": [
+    "pi-package",
+    "codex",
+    "code-mode",
+    "apply-patch"
+  ],
+  "files": [
+    "extension/",
+    "licenses/",
+    "NOTICE",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arklee/magpie-pi.git",
+    "directory": "packages/codex-exec-pi"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "pi": {
+    "extensions": [
+      "./extension/index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "1.6.0",
+    "@earendil-works/pi-tui": "1.6.0",
+    "typebox": "*"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "npm exec --yes --package typescript@7.0.2 -- tsc --noEmit --allowJs --skipLibCheck --module nodenext --moduleResolution nodenext --target es2022 extension/index.ts",
+    "check": "npm test && npm run typecheck"
+  }
+}

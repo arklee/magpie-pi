@@ -1,0 +1,10 @@
+codex-exec-pi
+
+extension/apply-patch/ is ported from pi-apply-patch
+(https://github.com/code-yeongyu/pi-apply-patch), MIT License,
+Copyright (c) 2026 Yeongyu Kim. The license text is in
+licenses/pi-apply-patch.LICENSE. pi-apply-patch in turn includes code ported
+from code-yeongyu/senpi-mono's builtin GPT apply_patch extension.
+
+The apply_patch patch language and grammar, and the exec/wait tool interface,
+mirror OpenAI Codex. No Codex source code or binaries are included.

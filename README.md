@@ -7,6 +7,7 @@ A monorepo of independently versioned and published Pi plugins.
 | Package | Description | Installation |
 | --- | --- | --- |
 | [magpie-pi](packages/magpie-pi/README.md) | Magpie community plugin integration | `pi install npm:magpie-pi` |
+| [codex-exec-pi](packages/codex-exec-pi/README.md) | Codex-style `exec`/`wait` code mode and `apply_patch`, without native binaries | `pi install npm:codex-exec-pi` |
 
 See each package's README for usage, configuration, requirements and licensing.
 Third-party plugins run with your user privileges; install only plugins you trust.
