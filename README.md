@@ -5,7 +5,7 @@
 
 ## 构建与安装
 
-要求 Go 1.23+、Bun（本机测试 1.3.14）、Pi **1.6.0**、Node.js。
+要求 Go 1.23+、Bun（本机测试 1.3.14）、Pi **1.6.0**、Node.js 和 npm（用于下载安装社区插件）。
 从本目录执行：
 
 ```sh
@@ -18,9 +18,43 @@ pi -e /absolute/path/magpie-pi/extension/index.ts
 
 开发依赖使用 Pi 安装目录的 node_modules 或安装 package.json 中精确版本的 peerDependencies。本机 node_modules 是指向已有 Pi 安装的开发用链接，不属于发布内容。
 
+本地路径安装直接引用项目目录，不会复制源码到 Pi 的插件目录。修改扩展后无需重新安装；修改 Go 代码后先重新执行 `node scripts/build.mjs`。涉及后台宿主或配置的更改请重启 Pi。
+
+## 快速使用：菜单安装 → 登录 → 选择模型
+
+完成上述构建后，可以持久安装并启动：
+
+```sh
+pi install ~/Code/agent-playground/magpie-pi
+pi
+```
+
+如果项目放在其他位置，请替换路径。也可以不安装，仅使用前面的 `pi -e` 临时加载；此时每次重启仍需带上 `-e`。
+
+1. 在 Pi 输入 `/magpie-plugins`，打开原生 TUI 菜单。用 **↑/↓** 选择、**Enter** 确认、**Esc** 退出；界面文字使用 English。
+2. 选择 **Search and install**，输入 `cursor` 或 `workbuddy`，从搜索结果中选择包和版本。阅读权限提示并确认后，扩展会下载插件并自动保存配置，无需手动编辑 JSON。
+3. 安装成功后退出并重新启动 Pi。若多个 Pi 实例共享状态目录，先全部退出再启动。
+4. 输入 `/login`，选择对应服务并按照提示完成登录。扩展注册的 provider ID 带 `magpie-` 前缀，菜单中可能显示插件提供的服务名称。
+5. 输入 `/model`，选择该服务提供的模型，然后正常聊天或使用工具。Pi 原有服务仍然可用。
+
+其他菜单项：
+
+| 菜单项 | 用途 |
+| --- | --- |
+| Installed plugins / details | 查看已配置插件和安装路径 |
+| Uninstall | 选择托管插件并确认卸载；重启后清理旧文件，保留凭据 |
+| Install by package name | 输入别名或完整包名，可附 `@精确版本` |
+| Help | 查看文本子命令 |
+
+也可以直接输入 `/magpie-plugins install cursor` 或 `/magpie-plugins install workbuddy`，仍需交互确认。再次安装同一托管插件可替换版本；不是后台自动更新。
+
+**当前限制：**真实 Cursor/WorkBuddy 账号尚未验证，搜索或安装成功不代表模型调用兼容。若 `/login` 没有出现服务，先确认已重启并查看启动错误；若 `/model` 没有模型，该插件可能未提供当前支持的协议，见下方“支持范围”。本扩展尚未接入 magpie 的内置 Codex、Claude、Copilot、Gemini 账号实现。
+
+## 配置与凭据（手动配置可选）
+
 首次加载会自动创建独立状态目录 ~/.local/share/magpie-pi（0700）和空的 config.json（0600）。未配置插件时仅显示配置提示，不启动 Go/Bun，也不影响 Pi 原有服务。已有配置不会被覆盖；无效 JSON 会明确报错。
 
-编辑其中的 config.json，配置插件，例如：
+推荐使用菜单管理插件。只有需要使用自行安装的插件时，才手动编辑其中的 config.json，例如：
 
 ```json
 {
@@ -39,7 +73,7 @@ pi -e /absolute/path/magpie-pi/extension/index.ts
 不要为新用户安装已撤回的 Antigravity 插件。
 
 MAGPIE_PI_STATE 可指定绝对状态目录，MAGPIE_PI_BUN 可指定 Bun 可执行文件。
-在 Pi /login 选择 magpie- 开头的 provider。支持 API key、OAuth 自动/粘贴代码登录，以及 host prompt/validate 条件表单；复杂厂商表单尚未实测。
+在 Pi /login 选择扩展注册的服务（内部 ID 以 magpie- 开头）。支持 API key、OAuth 自动/粘贴代码登录，以及 host prompt/validate 条件表单；复杂厂商表单尚未实测。
 真实 token 由原 host 写入独立 plugin-auth.json（0600），Pi 中仅保存 plugin-owned 标记。
 多账号默认使用 host 的默认账号；config.accounts 可按插件 provider ID 固定账号 key。
 Pi /logout 清除标记并停用此 provider，不删除插件凭据；再次使用需 /login。resolve 同时要求 Pi 保存的标记与 host 登录状态，不会绕过 Pi logout。尚无插件凭据删除命令。
