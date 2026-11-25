@@ -28,6 +28,19 @@ Review fixes: terminal bridge errors reject future requests; cancellation cleans
 
 No upstream modifications, HTTP gateway, core fork or global configuration changes.
 
+## npm packaging preparation
+
+- Added package metadata and a publish-file whitelist; removed the private flag. Project licensing remains UNLICENSED pending an explicit license decision; upstream vendor licensing is preserved.
+- Extension selects platform-named supervisor binaries for Linux/macOS/Windows x64/arm64 and reports unsupported targets without disabling plugin commands. Local builds retain the legacy test binary alias.
+- Build all six targets before packaging. npm tarball verification is complete; publication has not been performed. Non-Linux runtime support remains unverified.
+
+Release validation of 0.1.0:
+- Extraction verification, local build, and all six cross-builds passed.
+- npm test: 17 passed; Bun provider tests: 3 passed; typecheck and go vet passed. go test passed with no Go unit test files.
+- npm pack --dry-run and npm pack passed. Tarball contains 17 files (6,115,180 bytes compressed), including all six platform binaries, the local test alias, extensions, host, upstream license, manifest, and both READMEs. No node_modules, credentials, or state configuration included.
+- Extracted binary paths and Unix executable permissions checked for all targets. The extracted Linux package passed the Go/Bun fixture integration (login, discovery, streaming, tools, cancellation, and restart persistence), using temporary state and the packaged platform selector.
+- This does not verify npm registry name availability/publishing permissions, real vendor services, or live Pi TUI behavior. Project licensing remains UNLICENSED.
+
 ## 社区插件管理
 
 已实现 Pi 1.6.0 原生菜单：直接输入 `/magpie-plugins`，用方向键选择、Enter 确认、Esc 退出。搜索输入关键词后选择包名、版本和描述，明确确认后按所选精确版本安装。也可查看已安装插件详情、卸载托管插件或直接输入包名。手动配置只读；取消不触发后续操作。无交互模式保留帮助和只读子命令，拒绝修改。菜单测试使用模拟 UI，未验证真实厂商服务或真实 Pi TUI。

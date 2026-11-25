@@ -6,6 +6,7 @@ import type {ExtensionAPI} from "@earendil-works/pi-coding-agent";
 import * as completions from "@earendil-works/pi-ai/api/openai-completions";
 import * as anthropic from "@earendil-works/pi-ai/api/anthropic-messages";
 import {Bridge} from "./bridge.mjs";
+import {supervisorPath} from "./platform.mjs";
 import {registerPlugins,PluginManager} from "./plugins.mjs";
 
 export default async function(pi:ExtensionAPI){
@@ -31,7 +32,12 @@ export default async function(pi:ExtensionAPI){
   });
   return;
  }
- const bridge=new Bridge(path.join(root,"bin",process.platform==="win32"?"magpie-pi.exe":"magpie-pi"),path.join(root,"vendor","host.js"),state,process.env.MAGPIE_PI_BUN);
+ let executable:string;
+ try {executable=supervisorPath(root);}catch(e){
+  pi.on("session_start",async(_event,ctx)=>{if(ctx.hasUI)ctx.ui.notify(String(e),"error")});
+  return;
+ }
+ const bridge=new Bridge(executable,path.join(root,"vendor","host.js"),state,process.env.MAGPIE_PI_BUN);
  pi.on("session_shutdown",async()=>{await bridge.close();});
  try {
  const initialized=await bridge.call("init",{plugins:config.plugins,config:config.opencode || {},authPath:path.join(state,"plugin-auth.json"),directory:state});

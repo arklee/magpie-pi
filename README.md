@@ -2,36 +2,32 @@
 
 English | [简体中文](README.zh-CN.md)
 
-A small Go stdio supervisor, a thin Pi extension, and the magpie OpenCode Bun host **extracted without modifications**.
-No HTTP listener, full gateway, Go-to-TypeScript translation, or Pi core fork. Plugins handle accounts, refreshes, and requests; Pi's native SDK handles message, tool, and streaming-event conversion.
+Bring magpie's community plugin integrations to Pi through a lightweight extension and a local Go/Bun host.
 
-## Build and install
+Derived from [yetone/magpie](https://github.com/yetone/magpie), with its OpenCode host extracted without modifications. Thanks to the original author and maintainers for their work and continued dedication.
 
-Requires Go 1.23+, Bun (locally tested with 1.3.14), Pi **1.6.0**, Node.js, and npm (for downloading and installing community plugins).
-Run from this directory:
+Uses Pi's native SDK over stdio—no HTTP gateway or Pi core fork.
+
+## Installation
+
+Requires Pi **1.6.0**, Bun (locally tested with 1.3.14), Node.js, and npm for community plugin management.
+
+The npm package has not been published yet. For now, use a local checkout and complete [Build from source](#build-from-source) below, then install and start Pi:
 
 ```sh
-node scripts/build.mjs
-# Install the local extension explicitly; the build does not change global Pi settings.
 pi install /absolute/path/magpie-pi
-# Or load it for this session only.
-pi -e /absolute/path/magpie-pi/extension/index.ts
-```
-
-For development dependencies, use the Pi installation's node_modules or install the exact peerDependencies versions in package.json. The local node_modules is a development symlink to an existing Pi installation, not part of the release.
-
-Local-path installation references the project directory directly rather than copying source into Pi's plugin directory. Extension edits do not require reinstallation; after Go changes, rerun `node scripts/build.mjs`. Restart Pi after changes to the background host or configuration.
-
-## Quick start: install from the menu → log in → select a model
-
-After building, install persistently and start Pi:
-
-```sh
-pi install ~/Code/agent-playground/magpie-pi
 pi
 ```
 
-Replace the path if your checkout is elsewhere. Alternatively, use the temporary `pi -e` command above; include `-e` again after each restart.
+Replace the path with your checkout. To load the extension for one session without installing:
+
+```sh
+pi -e /absolute/path/magpie-pi/extension/index.ts
+```
+
+With temporary loading, include `-e` again after each restart.
+
+## Usage: install a plugin → log in → select a model
 
 1. Enter `/magpie-plugins` in Pi to open the native TUI menu. Use **↑/↓** to select, **Enter** to confirm, and **Esc** to exit. UI text is in English.
 2. Choose **Search and install**, enter `cursor` or `workbuddy`, then select a package and version. After you read the permissions notice and confirm, the extension downloads the plugin and saves its configuration automatically—no manual JSON editing needed.
@@ -101,6 +97,18 @@ Stdio provides backpressure; Go does not buffer complete responses. EOF closes B
 Plugin-spawned grandchildren are not contained as a process tree. A host crash fails pending requests; generation is not retried automatically.
 There is no local listening port. The Go supervisor manages only processes and state permissions; protocol adaptation stays in the thin extension.
 
+## Build from source
+
+Requires Go 1.23+ in addition to the runtime dependencies above. From the project directory:
+
+```sh
+node scripts/build.mjs
+```
+
+The build does not change global Pi settings. For development dependencies, use the Pi installation's node_modules or install the exact peerDependencies versions in package.json. The local node_modules is a development symlink, not part of the release.
+
+Local-path installation references the checkout directly. Extension edits do not require reinstallation; after Go changes, rerun the build. Restart Pi after host or configuration changes.
+
 ## Testing and updates
 
 ```sh
@@ -115,7 +123,13 @@ node scripts/build.mjs --all
 
 Tests use temporary state directories and local fixtures, requiring neither real tokens nor network access.
 Go currently has no standalone unit tests; its main behavior is covered by integration tests using the compiled binary.
-Cross-platform artifacts are in `bin/`. For deployment, name the appropriate artifact `magpie-pi` (`magpie-pi.exe` on Windows) and retain `vendor/` and `extension/`.
+Cross-platform artifacts are in `bin/`. Keep their platform-specific names, such as `magpie-pi-linux-amd64` and `magpie-pi-windows-arm64.exe`; the extension selects the matching binary automatically. Retain `vendor/` and `extension/`. A local build also creates the legacy `magpie-pi` / `magpie-pi.exe` alias for integration tests.
+
+### npm packaging preparation
+
+The package whitelist includes `extension/`, `vendor/`, `bin/`, the extraction manifest, and both READMEs. Run `node scripts/build.mjs --all` before packaging to include all six platform binaries. Package users need Bun and compatible Pi, but not Go. Only Linux runtime behavior has been verified. These packaging changes do not mean the package has been published.
+
+The project's own license is currently `UNLICENSED`; choose an explicit distribution license before public release. The extracted host retains its upstream MIT license in `vendor/LICENSE`.
 
 `extraction.json` pins the source commit, per-file SHA-256 hashes, and an empty patch list. `vendor/LICENSE` contains the upstream MIT license.
 Before updating, read the upstream design and review changes, then explicitly run:

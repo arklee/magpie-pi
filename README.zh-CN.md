@@ -2,36 +2,32 @@
 
 [English](README.md) | 简体中文
 
-小型 Go stdio supervisor + 薄 Pi 扩展 + **原样抽取**的 magpie OpenCode Bun host。
-没有 HTTP 监听、完整 gateway、Go→TS 翻译或 Pi core fork。插件负责账号、刷新和请求；Pi 原生 SDK 负责消息、工具和流式事件转换。
+通过轻量 Pi 扩展和本地 Go/Bun 宿主，将 magpie 的社区插件集成带入 Pi。
 
-## 构建与安装
+本项目源自 [yetone/magpie](https://github.com/yetone/magpie)，原样抽取其 OpenCode 宿主。感谢原作者和维护者的付出与持续维护。
 
-要求 Go 1.23+、Bun（本机测试 1.3.14）、Pi **1.6.0**、Node.js 和 npm（用于下载安装社区插件）。
-从本目录执行：
+通过 stdio 对接 Pi 原生 SDK，无需 HTTP 网关或修改 Pi 核心。
+
+## 安装
+
+需要 Pi **1.6.0**、Bun（本机测试 1.3.14）、Node.js 和 npm（用于管理社区插件）。
+
+npm 包尚未发布。目前请使用本地源码，先完成下方的[从源码构建](#从源码构建)，再安装并启动 Pi：
 
 ```sh
-node scripts/build.mjs
-# 安装本地扩展（由用户主动执行，不会由构建脚本修改全局 Pi 配置）
 pi install /absolute/path/magpie-pi
-# 或仅本次加载
-pi -e /absolute/path/magpie-pi/extension/index.ts
-```
-
-开发依赖使用 Pi 安装目录的 node_modules 或安装 package.json 中精确版本的 peerDependencies。本机 node_modules 是指向已有 Pi 安装的开发用链接，不属于发布内容。
-
-本地路径安装直接引用项目目录，不会复制源码到 Pi 的插件目录。修改扩展后无需重新安装；修改 Go 代码后先重新执行 `node scripts/build.mjs`。涉及后台宿主或配置的更改请重启 Pi。
-
-## 快速使用：菜单安装 → 登录 → 选择模型
-
-完成上述构建后，可以持久安装并启动：
-
-```sh
-pi install ~/Code/agent-playground/magpie-pi
 pi
 ```
 
-如果项目放在其他位置，请替换路径。也可以不安装，仅使用前面的 `pi -e` 临时加载；此时每次重启仍需带上 `-e`。
+请将路径替换为你的项目目录。如果不想安装，也可以仅本次加载：
+
+```sh
+pi -e /absolute/path/magpie-pi/extension/index.ts
+```
+
+临时加载时，每次重启仍需带上 `-e`。
+
+## 使用：安装插件 → 登录 → 选择模型
 
 1. 在 Pi 输入 `/magpie-plugins`，打开原生 TUI 菜单。用 **↑/↓** 选择、**Enter** 确认、**Esc** 退出；界面文字使用 English。
 2. 选择 **Search and install**，输入 `cursor` 或 `workbuddy`，从搜索结果中选择包和版本。阅读权限提示并确认后，扩展会下载插件并自动保存配置，无需手动编辑 JSON。
@@ -101,6 +97,18 @@ stdio 天然背压，Go 不缓冲完整响应。EOF 关闭 Bun stdin，2 秒后�
 插件自行派生的孙进程不提供进程树隔离。host 崩溃使 pending 请求失败，不自动重试生成。
 没有本机监听端口。Go supervisor 只管理进程与状态权限，协议适配留在薄扩展中。
 
+## 从源码构建
+
+除上述运行依赖外，还需要 Go 1.23+。在项目目录执行：
+
+```sh
+node scripts/build.mjs
+```
+
+构建不会修改全局 Pi 配置。开发依赖使用 Pi 安装目录的 node_modules，或安装 package.json 中精确版本的 peerDependencies。本机 node_modules 是开发用链接，不属于发布内容。
+
+本地路径安装直接引用源码目录。修改扩展后无需重新安装；修改 Go 代码后重新构建。涉及后台宿主或配置的更改请重启 Pi。
+
 ## 测试与更新
 
 ```sh
@@ -115,7 +123,13 @@ node scripts/build.mjs --all
 
 测试用临时状态目录和本地 fixture，不需要真实 token 或网络。
 Go 当前没有单独单元测试；主要行为由实际编译二进制集成测试覆盖。
-全平台产物在 bin/；部署时将对应产物命名为 magpie-pi（Windows 为 magpie-pi.exe），保留 vendor/ 和 extension/。
+全平台产物在 bin/；部署时保留平台专用文件名，例如 magpie-pi-linux-amd64 和 magpie-pi-windows-arm64.exe，扩展会自动选择对应二进制。保留 vendor/ 和 extension/。本地构建还会生成旧的 magpie-pi / magpie-pi.exe 别名，供集成测试使用。
+
+### npm 打包准备
+
+发布文件白名单包含 extension/、vendor/、bin/、抽取清单和中英文 README。打包前执行 `node scripts/build.mjs --all`，以包含六个平台的二进制。包用户需要 Bun 和兼容版本的 Pi，无需 Go。目前仅验证了 Linux 运行行为；这些打包调整不代表已经发布 npm 包。
+
+项目自身许可证暂标为 `UNLICENSED`，公开发布前应明确分发许可。抽取的 host 继续保留 vendor/LICENSE 中的上游 MIT 许可证。
 
 extraction.json 锁定来源 commit、每个文件 SHA-256、空补丁列表。vendor/LICENSE 为上游 MIT 许可证。
 升级时先阅读上游设计，审查差异，然后显式执行：
