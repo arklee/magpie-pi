@@ -10,7 +10,7 @@ Source checkouts do not include supervisor binaries. In addition to runtime depe
 
 ```sh
 git clone https://github.com/arklee/magpie-pi.git
-cd magpie-pi
+cd magpie-pi/packages/magpie-pi
 node scripts/build.mjs
 pi install .
 ```
@@ -30,6 +30,24 @@ go test ./...
 ```
 
 Before npm packaging, run `node scripts/build.mjs --all` to build all six platform binaries, then `npm pack --dry-run` to inspect the package. Cross-compilation does not establish runtime support.
+
+## Monorepo workflow
+
+This package lives in `packages/magpie-pi`. Its version, Go module, dependencies,
+build artifacts and npm publish whitelist remain independent of other plugins.
+From the repository root, run `npm run check --workspace magpie-pi` for all checks,
+or `npm run build:all --workspace magpie-pi` for cross-builds. Root `npm test`
+delegates to workspace test scripts; it does not include Bun provider tests.
+
+Install development dependencies with `npm install` from the repository root.
+Do not replace a pre-existing node_modules symlink to a Pi installation without
+checking its ownership and purpose. Package scripts execute in the package directory.
+The upstream checkout formerly at `../magpie` relative to the repository is now
+`../../../magpie` relative to this package; extraction still requires an explicit path.
+
+Run `npm pack --dry-run` and `npm publish` only from this package directory after
+release validation and explicit publication authorization. Use independent release
+tags such as `magpie-pi/v0.1.2`; do not version or publish the private root package.
 
 See [PLAN.md](../PLAN.md) for implementation status. `extraction.json` records upstream provenance and hashes; do not hand-edit generated `vendor/` files.
 

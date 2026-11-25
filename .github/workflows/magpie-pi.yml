@@ -1,0 +1,37 @@
+name: magpie-pi
+on:
+  push:
+    paths:
+      - 'packages/magpie-pi/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/magpie-pi.yml'
+  pull_request:
+    paths:
+      - 'packages/magpie-pi/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/magpie-pi.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/magpie-pi/go.mod
+          cache: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+      - run: npm ci --ignore-scripts
+      - run: npm run check --workspace magpie-pi
+      - run: npm run build:all --workspace magpie-pi
+      - run: npm pack --dry-run
+        working-directory: packages/magpie-pi

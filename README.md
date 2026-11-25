@@ -1,42 +1,18 @@
-# magpie-pi
+# Personal Pi plugins
 
-English | [简体中文](README.zh-CN.md)
+A monorepo of independently versioned and published Pi plugins.
 
-Bring magpie's community plugin integrations to Pi through a lightweight extension and a local host. Uses Pi's native SDK over stdio, without an HTTP gateway or Pi core changes.
+## Plugins
 
-Derived from [yetone/magpie](https://github.com/yetone/magpie), with its OpenCode host extracted without modifications. Thanks to the original author and maintainers.
+| Package | Description | Installation |
+| --- | --- | --- |
+| [magpie-pi](packages/magpie-pi/README.md) | Magpie community plugin integration | `pi install npm:magpie-pi` |
 
-## Installation
-
-Requires **Pi 1.6.0**, **Bun** to run community plugins, and **Node.js/npm** for plugin installation and management.
-
-```sh
-pi install npm:magpie-pi
-pi
-```
-
-The npm package includes prebuilt supervisor binaries: **no Go installation or build command is needed**. Bun is required to run configured community plugins (tested with 1.3.14), not to load the extension or open its plugin manager.
-
-## Usage
-
-1. Enter `/magpie-plugins` in Pi.
-2. Choose **Search and install**, search for `cursor` or `workbuddy`, select a package and version, then confirm.
-3. Exit and restart Pi. If multiple instances share the state directory, exit all of them before restarting.
-4. Enter `/login` and select the service.
-5. Enter `/model` to select a model and start chatting.
-
-Use ↑/↓ to navigate, Enter to confirm, and Esc to cancel. The menu also supports viewing installed plugins, installing by package name, and uninstalling. Pi's built-in providers remain available.
-
-Third-party plugins run with your user privileges; install only plugins you trust. Real Cursor/WorkBuddy accounts remain unverified.
-
-## State and credentials
-
-Configuration is created automatically in `~/.local/share/magpie-pi`; manual JSON editing is not needed for menu-managed plugins.
-
-- `MAGPIE_PI_STATE`: override the state directory with an absolute path.
-- `MAGPIE_PI_BUN`: override the Bun executable.
-- `/logout`: disables the provider without deleting plugin credentials; use `/login` to enable it again.
+See each package's README for usage, configuration, requirements and licensing.
+Third-party plugins run with your user privileges; install only plugins you trust.
+Magpie's real Cursor/WorkBuddy service compatibility remains unverified.
 
 ## License
 
-The project's own license is currently `UNLICENSED`. The extracted host retains its upstream MIT license in [vendor/LICENSE](vendor/LICENSE).
+Packages retain their own licensing and third-party notices. The repository does
+not grant an additional license over their contents.

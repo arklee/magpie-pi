@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {mkdtemp,readFile,writeFile,mkdir,rm,symlink} from "node:fs/promises";
+import {mkdtemp,readFile,writeFile,mkdir,rm,symlink,realpath} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {PluginManager,parse} from "../extension/plugins.mjs";
@@ -29,7 +29,9 @@ test("package validation and aliases",()=>{
  assert.equal(parse("@magpie-community/opencode-agy-cli-auth").version,undefined);
 });
 test("registry, transactional install/remove, failure, cancellation, lock",async()=>{
- const state=await mkdtemp(path.join(os.tmpdir(),"magpie-manager-"));
+ // macOS temporary directories can have symlinked ancestors; owned cleanup
+ // deliberately requires canonical stage paths.
+ const state=await realpath(await mkdtemp(path.join(os.tmpdir(),"magpie-manager-")));
  const file=path.join(state,"config.json");
  const original={plugins:[],accounts:{cursor:"keep"},custom:{preserve:true}};
  await writeFile(file,JSON.stringify(original));

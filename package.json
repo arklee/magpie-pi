@@ -1,26 +1,12 @@
 {
-  "name": "magpie-pi",
-  "version": "0.1.1",
-  "description": "Magpie community plugin integration for Pi",
-  "license": "UNLICENSED",
-  "keywords": ["pi-package"],
-  "files": ["extension/", "vendor/", "bin/", "extraction.json", "README.md", "README.zh-CN.md"],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/arklee/magpie-pi.git"
-  },
+  "name": "personal-pi-plugins",
+  "private": true,
   "type": "module",
-  "pi": {
-    "extensions": [
-      "./extension/index.ts"
-    ]
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-ai": "1.6.0",
-    "@earendil-works/pi-coding-agent": "1.6.0"
-  },
+  "workspaces": ["packages/*"],
   "scripts": {
-    "test": "node --test tests/*.test.mjs",
-    "typecheck": "npm exec --yes --package typescript@7.0.2 -- tsc --noEmit --allowJs --skipLibCheck --module nodenext --moduleResolution nodenext --target es2022 extension/index.ts"
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "check": "npm run check --workspaces --if-present"
   }
 }

@@ -59,3 +59,17 @@ Release validation of 0.1.0:
 更新后必须重启 Pi，不尝试卸载运行中的代码。移除停用配置并将旧托管目录排队，下次启动、host 启动前安全清理；不删除凭据或手动插件。配置保留无关字段，新文件权限 0600。外部编辑器不遵守管理锁时仍应避免同时写配置。JSON 损坏需手动修复；插件加载失败时命令仍可用于移除。
 
 确定性测试使用临时目录、模拟 registry 与 npm，不安装真实插件到用户状态。
+
+## Monorepo migration
+
+- Moved the complete package to `packages/magpie-pi` without rewriting Git history;
+  preserved package version 0.1.2 and the publish whitelist.
+- Added a private npm workspace root, lockfile, delegated checks and path-filtered
+  package CI. Versions and release tags remain package-specific.
+- Updated source-build and explicit upstream extraction paths. Remote repository
+  URL remains unchanged; no publication or global Pi configuration changes.
+- Local extraction verification, build, Node tests (17 passed, loader test skipped),
+  Bun tests (3 passed), typecheck, go vet, go test (no Go unit tests), six-target
+  cross-build and npm pack dry-run passed. macOS test fixture now canonicalizes its
+  temporary state path; production symlink checks are unchanged.
+- CI configuration has not yet run on GitHub. Live vendor/TUI coverage is unchanged.
