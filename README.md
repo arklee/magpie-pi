@@ -35,7 +35,7 @@ pi -e /absolute/path/magpie-pi/extension/index.ts
 }
 ```
 
-插件安装在用户选定的独立目录，用 npm install --save-exact 包名@明确版本，并保留 package-lock.json。target 必须指向已安装包或入口文件；本项目不自动下载安装第三方代码。WorkBuddy 使用 @magpie-community/opencode-workbuddy-auth，同样不是旧 builtin。
+插件安装在用户选定的独立目录，用 npm install --save-exact 包名@明确版本，并保留 package-lock.json。target 必须指向已安装包或入口文件；本项目不会在启动时自动下载安装第三方代码；可手动配置或通过下方菜单明确确认安装。WorkBuddy 使用 @magpie-community/opencode-workbuddy-auth，同样不是旧 builtin。
 不要为新用户安装已撤回的 Antigravity 插件。
 
 MAGPIE_PI_STATE 可指定绝对状态目录，MAGPIE_PI_BUN 可指定 Bun 可执行文件。
@@ -94,7 +94,9 @@ extract 从 git commit 读取字节，不复制工作区未提交修改；verify
 
 ## 社区插件管理
 
-已实现 Pi 1.6.0 原生命令，空配置也可用：
+已实现 Pi 1.6.0 原生菜单：直接输入 `/magpie-plugins`，用方向键选择、Enter 确认、Esc 退出。搜索输入关键词后选择包名、版本和描述，明确确认后按所选精确版本安装。也可查看已安装插件详情、卸载托管插件或直接输入包名。手动配置只读；取消不触发后续操作。无交互模式保留帮助和只读子命令，拒绝修改。菜单测试使用模拟 UI，未验证真实厂商服务或真实 Pi TUI。
+
+保留原有子命令，空配置也可用：
 - `/magpie-plugins help`
 - `/magpie-plugins search cursor`
 - `/magpie-plugins install cursor`（或完整包名及 @精确版本）

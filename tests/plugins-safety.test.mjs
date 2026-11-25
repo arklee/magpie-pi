@@ -24,7 +24,7 @@ test("real overlapping operations reject under the lock",()=>fixture(async state
  await started;
  try{
   const second=new PluginManager(state,{fetcher,runner:async()=>assert.fail("second runner")});
-  await assert.rejects(()=>second.mutate("remove","cursor",async()=>true),/另一个/);
+  await assert.rejects(()=>second.mutate("remove","cursor",async()=>true),/Another plugin operation/);
  }finally{release();await pending}
  assert.equal((await first.list()).length,1);
  assert.deepEqual(parse("workbuddy@1.2.3"),{name:"@magpie-community/opencode-workbuddy-auth",version:"1.2.3"});
@@ -37,11 +37,11 @@ test("command refuses noninteractive mutations, handles cancellation and HTTP er
  const notices=[],ctx={hasUI:false,ui:{confirm:async()=>{confirmations++;return false},notify:(text)=>notices.push(text)}};
  const before=await readFile(path.join(state,"config.json"),"utf8");
  for(const verb of ["install","remove"]){
-  await command.handler(verb+" cursor",ctx);assert.match(notices.pop(),/拒绝修改/);
+  await command.handler(verb+" cursor",ctx);assert.match(notices.pop(),/Changes refused/);
  }
  assert.equal(confirmations,0);ctx.hasUI=true;
  for(const verb of ["install","remove"]){
-  await command.handler(verb+" cursor",ctx);assert.equal(notices.pop(),"已取消");
+  await command.handler(verb+" cursor",ctx);assert.equal(notices.pop(),"Cancelled");
  }
  assert.equal(confirmations,2);
  await command.handler("search cursor",ctx);assert.match(notices.pop(),/HTTP 503/);
@@ -52,7 +52,7 @@ test("symlink managed root is refused without touching destination",()=>fixture(
  try{
   await symlink(outside,path.join(state,"managed-plugins"),"dir");
   const manager=new PluginManager(state,{fetcher,runner:async()=>assert.fail("must not run")});
-  await assert.rejects(()=>manager.mutate("install","cursor",async()=>true),/符号链接/);
+  await assert.rejects(()=>manager.mutate("install","cursor",async()=>true),/symlink/);
   assert.deepEqual(await readdir(outside),[]);
  }finally{await rm(outside,{recursive:true,force:true})}
 }));
@@ -62,7 +62,7 @@ test("external config change survives aborted activation",()=>fixture(async stat
  const manager=new PluginManager(state,{fetcher,runner:async(...args)=>{
   await install(...args);await writeFile(file,JSON.stringify(external));
  }});
- await assert.rejects(()=>manager.mutate("install","cursor",async()=>true),/配置在操作中改变/);
+ await assert.rejects(()=>manager.mutate("install","cursor",async()=>true),/Configuration changed during the operation/);
  assert.deepEqual(JSON.parse(await readFile(file,"utf8")),external);
  assert.deepEqual(await readdir(path.join(state,"managed-plugins")),[]);
 }));

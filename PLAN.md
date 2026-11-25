@@ -30,7 +30,9 @@ No upstream modifications, HTTP gateway, core fork or global configuration chang
 
 ## 社区插件管理
 
-已实现 Pi 1.6.0 原生命令，空配置也可用：
+已实现 Pi 1.6.0 原生菜单：直接输入 `/magpie-plugins`，用方向键选择、Enter 确认、Esc 退出。搜索输入关键词后选择包名、版本和描述，明确确认后按所选精确版本安装。也可查看已安装插件详情、卸载托管插件或直接输入包名。手动配置只读；取消不触发后续操作。无交互模式保留帮助和只读子命令，拒绝修改。菜单测试使用模拟 UI，未验证真实厂商服务或真实 Pi TUI。
+
+保留原有子命令，空配置也可用：
 - `/magpie-plugins help`
 - `/magpie-plugins search cursor`
 - `/magpie-plugins install cursor`（或完整包名及 @精确版本）
@@ -41,6 +43,6 @@ No upstream modifications, HTTP gateway, core fork or global configuration chang
 
 安装及移除必须 UI 明确确认，无交互模式拒绝修改。npm 使用 execFile、--ignore-scripts、--save-exact；禁用安装脚本不代表安全沙箱，运行插件仍拥有当前用户权限。下载使用独立 managed-plugins/pkg-* 目录，成功才原子替换配置并固定版本；失败保留原配置。跨进程锁拒绝并发修改，异常退出遗留 plugins.lock 时，确认没有操作运行后手动删除锁。
 
-更新后必须重启 Pi，不尝试卸载运行中的代码。移除只停用配置，不删除凭据、旧安装目录或手动插件；旧目录保留用于恢复。配置保留无关字段，新文件权限 0600。外部编辑器不遵守管理锁时仍应避免同时写配置。JSON 损坏需手动修复；插件加载失败时命令仍可用于移除。
+更新后必须重启 Pi，不尝试卸载运行中的代码。移除停用配置并将旧托管目录排队，下次启动、host 启动前安全清理；不删除凭据或手动插件。配置保留无关字段，新文件权限 0600。外部编辑器不遵守管理锁时仍应避免同时写配置。JSON 损坏需手动修复；插件加载失败时命令仍可用于移除。
 
 确定性测试使用临时目录、模拟 registry 与 npm，不安装真实插件到用户状态。

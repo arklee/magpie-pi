@@ -24,10 +24,10 @@ export default async function(pi:ExtensionAPI){
   source=await readFile(configPath,"utf8");
  }
  const config=JSON.parse(source);
- if(!config||!Array.isArray(config.plugins))throw new Error(`magpie-pi: ${configPath} 必须包含 plugins 数组`);
+ if(!config||!Array.isArray(config.plugins))throw new Error(`magpie-pi: ${configPath} must contain a plugins array`);
  if(config.plugins.length===0){
   pi.on("session_start",async(_event,ctx)=>{
-   if(ctx.hasUI)ctx.ui.notify(`magpie-pi 尚未配置服务。使用 /magpie-plugins search 查询及 /magpie-plugins install cursor 安装，或编辑 ${configPath}；配置后重启 Pi。安装步骤见 ${path.join(root,"README.md")}`,"info");
+   if(ctx.hasUI)ctx.ui.notify(`No magpie-pi providers configured. Use /magpie-plugins to search and install plugins, or edit ${configPath}; restart Pi after configuration. See ${path.join(root,"README.md")}`,"info");
   });
   return;
  }
@@ -93,5 +93,5 @@ export default async function(pi:ExtensionAPI){
    stream:stream(false),streamSimple:stream(true)
   });
  }
- }catch(e){await bridge.close();pi.on("session_start",async(_event,ctx)=>{if(ctx.hasUI)ctx.ui.notify(String(e)+"；可使用 /magpie-plugins 修复配置","error")});}
+ }catch(e){await bridge.close();pi.on("session_start",async(_event,ctx)=>{if(ctx.hasUI)ctx.ui.notify(String(e)+"; use /magpie-plugins to fix the configuration","error")});}
 }

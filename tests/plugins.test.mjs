@@ -45,14 +45,14 @@ test("registry, transactional install/remove, failure, cancellation, lock",async
  });
  try{
   assert.equal((await manager.search("cursor")).length,1);
-  assert.equal(await manager.mutate("install","cursor",async()=>false),"已取消");assert.equal(runs,0);
+  assert.equal(await manager.mutate("install","cursor",async()=>false),"Cancelled");assert.equal(runs,0);
   await assert.rejects(()=>manager.mutate("install","@magpie-community/opencode-antigravity-auth",async()=>true));
   await manager.mutate("install","cursor",async()=>true);
   const saved=await readFile(file,"utf8");
   assert.equal(JSON.parse(saved).plugins[0].spec,name+"@1.2.3");
   fail=true;await assert.rejects(()=>manager.mutate("install","cursor",async()=>true));assert.equal(await readFile(file,"utf8"),saved);
   await mkdir(path.join(state,"plugins.lock"));
-  await assert.rejects(()=>manager.mutate("remove","cursor",async()=>true),/另一个/);
+  await assert.rejects(()=>manager.mutate("remove","cursor",async()=>true),/Another plugin operation/);
   await rm(path.join(state,"plugins.lock"),{recursive:true});
   await manager.mutate("remove","cursor",async()=>true);
   const oldTarget=JSON.parse(saved).plugins[0].target;
@@ -61,6 +61,6 @@ test("registry, transactional install/remove, failure, cancellation, lock",async
   await assert.rejects(()=>readFile(path.join(oldTarget,"package.json")),/ENOENT/);
   assert.deepEqual(JSON.parse(await readFile(file,"utf8")),{...original,pendingPluginDeletes:[]});
   await writeFile(file,JSON.stringify({...original,plugins:[{spec:name,target:"/manual"}]}));
-  await assert.rejects(()=>manager.mutate("remove","cursor",async()=>true),/手动/);
+  await assert.rejects(()=>manager.mutate("remove","cursor",async()=>true),/manual/);
  }finally{await rm(state,{recursive:true,force:true})}
 });

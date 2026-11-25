@@ -8,7 +8,7 @@ export function parse(input){
  const alias=/^(cursor|workbuddy)(@.*)?$/.exec(input);
  const value=alias?scope+alias[1]+"-auth"+(alias[2]||""):input;
  const m=/^(@magpie-community\/opencode-[a-z0-9-]+-auth)(?:@([0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.-]+)?))?$/.exec(value);
- if(!m)throw Error("只接受社区 auth 包名及精确版本");
+ if(!m)throw Error("Only community auth package names and exact versions are accepted");
  return {name:m[1],version:m[2]};
 }
 export class PluginManager{
@@ -64,67 +64,114 @@ export class PluginManager{
   if(!r.ok)throw Error("Registry HTTP "+r.status);
   return r.json();
  }
- async config(){const c=JSON.parse(await readFile(this.file,"utf8"));if(!Array.isArray(c.plugins))throw Error("plugins 必须是数组");return c;}
+ async config(){const c=JSON.parse(await readFile(this.file,"utf8"));if(!Array.isArray(c.plugins))throw Error("plugins must be an array");return c;}
  async search(query){
   const data=await this.json("https://registry.npmjs.org/-/v1/search?size=100&text="+encodeURIComponent("@magpie-community/opencode- "+query));
   return (data.objects||[]).map(x=>x.package).filter(p=>{try{return parse(p.name).name!==withdrawn}catch{return false}}).map(p=>({name:p.name,version:p.version,description:p.description}));
  }
  async list(){return (await this.config()).plugins;}
  async mutate(action,input,confirm){
-  if(!["install","remove"].includes(action))throw Error("未知操作");
+  if(!["install","remove"].includes(action))throw Error("Unknown operation");
   const {name,version}=parse(input);
-  if(action==="install"&&name===withdrawn)throw Error("Antigravity 插件已撤回，不提供安装；agy-cli 不受影响");
-  if(!await confirm(name))return "已取消";
+  if(action==="install"&&name===withdrawn)throw Error("The Antigravity plugin has been withdrawn and cannot be installed; agy-cli is unaffected");
+  if(!await confirm(name))return "Cancelled";
   const lock=path.join(this.state,"plugins.lock");
-  try{await mkdir(lock,{mode:0o700})}catch(e){if(e.code==="EEXIST")throw Error("另一个插件操作正在运行；如进程已退出，请手动清理 plugins.lock");throw e}
+  try{await mkdir(lock,{mode:0o700})}catch(e){if(e.code==="EEXIST")throw Error("Another plugin operation is running. If that process has exited, manually remove plugins.lock");throw e}
   let stage;
   try{
    const before=await readFile(this.file,"utf8"),c=JSON.parse(before);
-   if(!Array.isArray(c.plugins))throw Error("plugins 必须是数组");
+   if(!Array.isArray(c.plugins))throw Error("plugins must be an array");
    const matches=c.plugins.filter(p=>p.spec===name||p.spec?.startsWith(name+"@"));
    const managedRoot=path.join(path.resolve(this.state),"managed-plugins");
-   if(matches.some(p=>!p.magpieManaged||typeof p.target!=="string"||!path.resolve(p.target).startsWith(managedRoot+path.sep)))throw Error("拒绝覆盖手动配置");
+   if(matches.some(p=>!p.magpieManaged||typeof p.target!=="string"||!path.resolve(p.target).startsWith(managedRoot+path.sep)))throw Error("Refusing to overwrite manual configuration");
    if(action==="remove"){
     c.plugins=c.plugins.filter(p=>!matches.includes(p));
    }else{
     const metadata=await this.json("https://registry.npmjs.org/"+encodeURIComponent(name));
     const resolved=version||metadata["dist-tags"]?.latest;
     parse(name+"@"+resolved);
-    if(!metadata.versions?.[resolved])throw Error("版本不存在");
+    if(!metadata.versions?.[resolved])throw Error("Version not found");
     const root=path.join(this.state,"managed-plugins");
     await mkdir(root,{recursive:true,mode:0o700});
-    if((await lstat(root)).isSymbolicLink()||await realpath(root)!==path.join(await realpath(this.state),"managed-plugins"))throw Error("managed-plugins 不允许符号链接");
+    if((await lstat(root)).isSymbolicLink()||await realpath(root)!==path.join(await realpath(this.state),"managed-plugins"))throw Error("managed-plugins must not be a symlink");
     stage=await mkdtemp(path.join(root,"pkg-"));
     await writeFile(path.join(stage,"package.json"),'{"private":true}',{mode:0o600});
     await this.runner("npm",["install","--ignore-scripts","--save-exact","--no-audit","--no-fund","--registry=https://registry.npmjs.org",name+"@"+resolved],{cwd:stage,timeout:120000,maxBuffer:1024*1024});
     const target=path.join(stage,"node_modules",name);
     const installed=JSON.parse(await readFile(path.join(target,"package.json"),"utf8"));
-    if(installed.name!==name||installed.version!==resolved)throw Error("安装包元数据不匹配");
+    if(installed.name!==name||installed.version!==resolved)throw Error("Installed package metadata does not match");
     c.plugins=c.plugins.filter(p=>!matches.includes(p));
     await writeFile(path.join(stage,".magpie-owned.json"),JSON.stringify({id:path.basename(stage),spec:name+"@"+resolved}),{mode:0o600,flag:"wx"});
     c.plugins.push({spec:name+"@"+resolved,target,magpieManaged:true});
    }
    c.pendingPluginDeletes=[...(Array.isArray(c.pendingPluginDeletes)?c.pendingPluginDeletes:[]),...matches.map(p=>this.stageEntry(p)).filter(Boolean)];
-   if(await readFile(this.file,"utf8")!==before)throw Error("配置在操作中改变，请重试");
+   if(await readFile(this.file,"utf8")!==before)throw Error("Configuration changed during the operation; please retry");
    const tmp=path.join(lock,"config.json");
    await writeFile(tmp,JSON.stringify(c,null,2)+"\n",{mode:0o600,flag:"wx"});
    await rename(tmp,this.file);stage=undefined;
-   return "已更新配置，请重启 Pi。安装成功不代表兼容。凭据保留；旧托管安装将在下次启动、host 启动前清理，当前插件不受影响。";
+   return "Configuration updated. Restart Pi to apply changes. Installation does not guarantee compatibility. Credentials are preserved; old managed installations will be cleaned up before the host starts next time. Currently running plugins are unaffected.";
   }finally{if(stage)await rm(stage,{recursive:true,force:true});await rm(lock,{recursive:true,force:true})}
  }
 }
+const help="/magpie-plugins search QUERY | install PACKAGE[@EXACT_VERSION] | list | remove PACKAGE. Aliases: cursor/workbuddy. Searches community auth packages only; compatibility is not guaranteed.";
+async function change(manager,ctx,action,input){
+ return manager.mutate(action,input,async()=>{
+  const ok=await ctx.ui.confirm(action+" "+input,"Third-party plugins run with your user permissions. Disabling npm install scripts does not sandbox runtime code. Removal preserves credentials; old managed directories are deleted on next startup (including versions replaced by updates). Continue?");
+  if(ok)ctx.ui.notify((action==="install"?"Installing":"Removing")+"…","info");
+  return ok;
+ });
+}
+// One selection path per invocation: Escape always exits, never reopens a prompt.
+export async function pluginMenu(manager,ctx){
+ const choice=await ctx.ui.select("Magpie Community Plugins",["Search and install","Installed plugins / details","Uninstall","Install by package name","Help"]);
+ if(!choice)return;
+ if(choice==="Help"){ctx.ui.notify(help,"info");return}
+ if(choice==="Install by package name"){
+  const input=await ctx.ui.input("Package name[@EXACT_VERSION]","cursor / workbuddy");
+  if(input?.trim())ctx.ui.notify(await change(manager,ctx,"install",input.trim()),"info");
+  return;
+ }
+ if(choice==="Search and install"){
+  const query=await ctx.ui.input("Search community plugins","cursor / workbuddy");
+  if(!query?.trim())return;
+  ctx.ui.notify("Searching npm…","info");
+  const results=await manager.search(query.trim());
+  if(!results.length){ctx.ui.notify("No results found","info");return}
+  const labels=results.map((p,i)=>`${i+1}. ${p.name}@${p.version} — ${p.description||"No description"}`);
+  const selected=await ctx.ui.select("Select a plugin to install (compatibility not guaranteed)",labels);
+  const p=results[labels.indexOf(selected)];
+  if(!p)return;
+  const spec=p.name+"@"+p.version;
+  if(!parse(spec).version)throw Error("Search result is missing an exact version");
+  ctx.ui.notify(await change(manager,ctx,"install",spec),"info");
+  return;
+ }
+ const all=await manager.list();
+ const owned=p=>!!manager.stageEntry(p);
+ const entries=choice==="Uninstall"?all.filter(owned):all;
+ if(!entries.length){ctx.ui.notify((choice==="Uninstall"?"No managed plugins to uninstall":"No installed plugins"),"info");return}
+ const labels=entries.map((p,i)=>`${i+1}. ${p.spec||p.target} [${owned(p)?"Managed":"Manual / read-only"}]`);
+ const selected=await ctx.ui.select(choice,labels);
+ const p=entries[labels.indexOf(selected)];
+ if(!p)return;
+ ctx.ui.notify(`${p.spec||"Manual plugin"}\nPath: ${p.target}\n${owned(p)?"Managed; removal preserves credentials and cleans up files on next startup":"Read-only: cannot be modified through this menu"}`,"info");
+ if(!owned(p))return;
+ if(choice!=="Uninstall"&&await ctx.ui.select("Plugin actions",["Uninstall","Close"])!=="Uninstall")return;
+ ctx.ui.notify(await change(manager,ctx,"remove",p.spec),"info");
+}
 export function registerPlugins(pi,state,dependencies={}){
  const manager=new PluginManager(state,dependencies);
- pi.registerCommand("magpie-plugins",{description:"社区插件 help/search/install/list/remove",handler:async(args,ctx)=>{
+ pi.registerCommand("magpie-plugins",{description:"Community plugin menu and help/search/install/list/remove",handler:async(args,ctx)=>{
   try{
+   if(!args.trim()&&ctx.hasUI)return await pluginMenu(manager,ctx);
    const [action="help",...rest]=args.trim().split(/\s+/),input=rest.join(" ");
    let result;
    if(action==="search")result=JSON.stringify(await manager.search(input),null,2);
    else if(action==="list")result=JSON.stringify(await manager.list(),null,2);
    else if(["install","remove"].includes(action)){
-    if(!ctx.hasUI)throw Error("需要交互界面明确确认，拒绝修改");
-    result=await manager.mutate(action,input,name=>ctx.ui.confirm(action+" "+name,"第三方插件运行时拥有当前用户全部权限。npm 禁用安装脚本不能隔离运行代码。移除保留凭据，旧托管目录下次启动删除（更新也会清理旧版本）。继续？"));
-   }else result="/magpie-plugins search 查询 | install 包名[@精确版本] | list | remove 包名；别名 cursor/workbuddy。仅搜索社区 auth 包，不保证兼容。";
+    if(!ctx.hasUI)throw Error("Changes refused: explicit confirmation in an interactive UI is required");
+    result=await manager.mutate(action,input,name=>ctx.ui.confirm(action+" "+name,"Third-party plugins run with your user permissions. Disabling npm install scripts does not sandbox runtime code. Removal preserves credentials; old managed directories are deleted on next startup (including versions replaced by updates). Continue?"));
+   }else result="/magpie-plugins search QUERY | install PACKAGE[@EXACT_VERSION] | list | remove PACKAGE. Aliases: cursor/workbuddy. Searches community auth packages only; compatibility is not guaranteed.";
    ctx.ui.notify(result,"info");
   }catch(e){ctx.ui.notify(String(e),"error")}
  }});
