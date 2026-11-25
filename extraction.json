@@ -1,0 +1,17 @@
+{
+  "repository": "https://github.com/yetone/magpie",
+  "commit": "e6f4af3f9a25d0b18d36d8224fb861c8ab254ea8",
+  "patches": [],
+  "files": [
+    {
+      "source": "internal/plugin/host.js",
+      "path": "vendor/host.js",
+      "sha256": "962fccd89469eaf5749e5e1b742ee81a03ded84820c055ffcf3b5747abe7fac9"
+    },
+    {
+      "source": "LICENSE",
+      "path": "vendor/LICENSE",
+      "sha256": "79d2c8444715d4bc453ec4f8a0aaf2051a4c1ee5ac08f5bd2e5848aef87c7572"
+    }
+  ]
+}
