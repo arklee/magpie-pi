@@ -1,60 +1,62 @@
 # magpie-pi
 
-小型 Go stdio supervisor + 薄 Pi 扩展 + **原样抽取**的 magpie OpenCode Bun host。
-没有 HTTP 监听、完整 gateway、Go→TS 翻译或 Pi core fork。插件负责账号、刷新和请求；Pi 原生 SDK 负责消息、工具和流式事件转换。
+English | [简体中文](README.zh-CN.md)
 
-## 构建与安装
+A small Go stdio supervisor, a thin Pi extension, and the magpie OpenCode Bun host **extracted without modifications**.
+No HTTP listener, full gateway, Go-to-TypeScript translation, or Pi core fork. Plugins handle accounts, refreshes, and requests; Pi's native SDK handles message, tool, and streaming-event conversion.
 
-要求 Go 1.23+、Bun（本机测试 1.3.14）、Pi **1.6.0**、Node.js 和 npm（用于下载安装社区插件）。
-从本目录执行：
+## Build and install
+
+Requires Go 1.23+, Bun (locally tested with 1.3.14), Pi **1.6.0**, Node.js, and npm (for downloading and installing community plugins).
+Run from this directory:
 
 ```sh
 node scripts/build.mjs
-# 安装本地扩展（由用户主动执行，不会由构建脚本修改全局 Pi 配置）
+# Install the local extension explicitly; the build does not change global Pi settings.
 pi install /absolute/path/magpie-pi
-# 或仅本次加载
+# Or load it for this session only.
 pi -e /absolute/path/magpie-pi/extension/index.ts
 ```
 
-开发依赖使用 Pi 安装目录的 node_modules 或安装 package.json 中精确版本的 peerDependencies。本机 node_modules 是指向已有 Pi 安装的开发用链接，不属于发布内容。
+For development dependencies, use the Pi installation's node_modules or install the exact peerDependencies versions in package.json. The local node_modules is a development symlink to an existing Pi installation, not part of the release.
 
-本地路径安装直接引用项目目录，不会复制源码到 Pi 的插件目录。修改扩展后无需重新安装；修改 Go 代码后先重新执行 `node scripts/build.mjs`。涉及后台宿主或配置的更改请重启 Pi。
+Local-path installation references the project directory directly rather than copying source into Pi's plugin directory. Extension edits do not require reinstallation; after Go changes, rerun `node scripts/build.mjs`. Restart Pi after changes to the background host or configuration.
 
-## 快速使用：菜单安装 → 登录 → 选择模型
+## Quick start: install from the menu → log in → select a model
 
-完成上述构建后，可以持久安装并启动：
+After building, install persistently and start Pi:
 
 ```sh
 pi install ~/Code/agent-playground/magpie-pi
 pi
 ```
 
-如果项目放在其他位置，请替换路径。也可以不安装，仅使用前面的 `pi -e` 临时加载；此时每次重启仍需带上 `-e`。
+Replace the path if your checkout is elsewhere. Alternatively, use the temporary `pi -e` command above; include `-e` again after each restart.
 
-1. 在 Pi 输入 `/magpie-plugins`，打开原生 TUI 菜单。用 **↑/↓** 选择、**Enter** 确认、**Esc** 退出；界面文字使用 English。
-2. 选择 **Search and install**，输入 `cursor` 或 `workbuddy`，从搜索结果中选择包和版本。阅读权限提示并确认后，扩展会下载插件并自动保存配置，无需手动编辑 JSON。
-3. 安装成功后退出并重新启动 Pi。若多个 Pi 实例共享状态目录，先全部退出再启动。
-4. 输入 `/login`，选择对应服务并按照提示完成登录。扩展注册的 provider ID 带 `magpie-` 前缀，菜单中可能显示插件提供的服务名称。
-5. 输入 `/model`，选择该服务提供的模型，然后正常聊天或使用工具。Pi 原有服务仍然可用。
+1. Enter `/magpie-plugins` in Pi to open the native TUI menu. Use **↑/↓** to select, **Enter** to confirm, and **Esc** to exit. UI text is in English.
+2. Choose **Search and install**, enter `cursor` or `workbuddy`, then select a package and version. After you read the permissions notice and confirm, the extension downloads the plugin and saves its configuration automatically—no manual JSON editing needed.
+3. Exit and restart Pi after installation. If multiple Pi instances share the state directory, exit all of them before restarting.
+4. Enter `/login`, select the service, and follow the login prompts. Registered provider IDs have a `magpie-` prefix; menus may display the service name supplied by the plugin.
+5. Enter `/model`, select a model from that service, and chat or use tools normally. Pi's built-in services remain available.
 
-其他菜单项：
+Other menu entries:
 
-| 菜单项 | 用途 |
+| Menu entry | Purpose |
 | --- | --- |
-| Installed plugins / details | 查看已配置插件和安装路径 |
-| Uninstall | 选择托管插件并确认卸载；重启后清理旧文件，保留凭据 |
-| Install by package name | 输入别名或完整包名，可附 `@精确版本` |
-| Help | 查看文本子命令 |
+| Installed plugins / details | View configured plugins and installation paths |
+| Uninstall | Select and confirm removal of a managed plugin; old files are cleaned up after restart, preserving credentials |
+| Install by package name | Enter an alias or full package name, optionally with `@exact-version` |
+| Help | View text subcommands |
 
-也可以直接输入 `/magpie-plugins install cursor` 或 `/magpie-plugins install workbuddy`，仍需交互确认。再次安装同一托管插件可替换版本；不是后台自动更新。
+You can also enter `/magpie-plugins install cursor` or `/magpie-plugins install workbuddy`; interactive confirmation is still required. Reinstalling a managed plugin can replace its version; this is not an automatic background update.
 
-**当前限制：**真实 Cursor/WorkBuddy 账号尚未验证，搜索或安装成功不代表模型调用兼容。若 `/login` 没有出现服务，先确认已重启并查看启动错误；若 `/model` 没有模型，该插件可能未提供当前支持的协议，见下方“支持范围”。本扩展尚未接入 magpie 的内置 Codex、Claude、Copilot、Gemini 账号实现。
+**Current limitations:** Real Cursor/WorkBuddy accounts have not been verified. Successful search or installation does not establish model-call compatibility. If a service is missing from `/login`, confirm you restarted and check startup errors. If `/model` lists no models, the plugin may not expose a supported protocol; see “Supported scope” below. This extension does not yet integrate magpie's built-in Codex, Claude, Copilot, or Gemini account implementations.
 
-## 配置与凭据（手动配置可选）
+## Configuration and credentials (manual configuration is optional)
 
-首次加载会自动创建独立状态目录 ~/.local/share/magpie-pi（0700）和空的 config.json（0600）。未配置插件时仅显示配置提示，不启动 Go/Bun，也不影响 Pi 原有服务。已有配置不会被覆盖；无效 JSON 会明确报错。
+On first load, the extension creates a separate state directory, `~/.local/share/magpie-pi` (0700), and an empty `config.json` (0600). With no plugins configured, it only displays a configuration hint: Go/Bun are not started, and Pi's existing services are unaffected. Existing configuration is not overwritten; invalid JSON produces an explicit error.
 
-推荐使用菜单管理插件。只有需要使用自行安装的插件时，才手动编辑其中的 config.json，例如：
+Use the menu to manage plugins. Manual editing of `config.json` is only needed for plugins you install yourself, for example:
 
 ```json
 {
@@ -69,37 +71,37 @@ pi
 }
 ```
 
-插件安装在用户选定的独立目录，用 npm install --save-exact 包名@明确版本，并保留 package-lock.json。target 必须指向已安装包或入口文件；本项目不会在启动时自动下载安装第三方代码；可手动配置或通过下方菜单明确确认安装。WorkBuddy 使用 @magpie-community/opencode-workbuddy-auth，同样不是旧 builtin。
-不要为新用户安装已撤回的 Antigravity 插件。
+For manual installation, use a separate directory of your choice, run `npm install --save-exact package-name@exact-version`, and retain `package-lock.json`. `target` must point to an installed package or entry file. This project does not automatically download third-party code at startup; configure it manually or explicitly confirm installation through the menu. WorkBuddy uses `@magpie-community/opencode-workbuddy-auth`, not the old built-in implementation.
+Do not install the withdrawn Antigravity plugin for new users.
 
-MAGPIE_PI_STATE 可指定绝对状态目录，MAGPIE_PI_BUN 可指定 Bun 可执行文件。
-在 Pi /login 选择扩展注册的服务（内部 ID 以 magpie- 开头）。支持 API key、OAuth 自动/粘贴代码登录，以及 host prompt/validate 条件表单；复杂厂商表单尚未实测。
-真实 token 由原 host 写入独立 plugin-auth.json（0600），Pi 中仅保存 plugin-owned 标记。
-多账号默认使用 host 的默认账号；config.accounts 可按插件 provider ID 固定账号 key。
-Pi /logout 清除标记并停用此 provider，不删除插件凭据；再次使用需 /login。resolve 同时要求 Pi 保存的标记与 host 登录状态，不会绕过 Pi logout。尚无插件凭据删除命令。
+`MAGPIE_PI_STATE` selects an absolute state directory; `MAGPIE_PI_BUN` selects the Bun executable.
+Use Pi's `/login` to select an extension-registered service (internal IDs start with `magpie-`). API keys, automatic/code-paste OAuth, and conditional host prompt/validate forms are supported; complex vendor forms have not been tested live.
+The original host stores real tokens in a separate `plugin-auth.json` (0600); Pi stores only a `plugin-owned` marker.
+For multiple accounts, the host's default account is used unless `config.accounts` pins an account key by plugin provider ID.
+Pi's `/logout` clears the marker and disables the provider without deleting plugin credentials; use `/login` to enable it again. Resolution requires both Pi's saved marker and the host's login state, so cached credentials cannot bypass Pi logout. There is no plugin-credential deletion command yet.
 
-## 支持范围
+## Supported scope
 
-已测试完整 Go → Bun fixture 插件 → Pi 原生 OpenAI Chat SDK：登录、模型发现、文本、工具调用、取消及重启后的凭据持久化。
-仅暴露 @ai-sdk/openai-compatible 的 Chat Completions 模型和 @ai-sdk/anthropic 的 Messages 模型。
-Anthropic 路径使用 Pi 原生实现，但未进行真实服务/fixture 验证。Responses/Gemini 不支持；@ai-sdk/openai 无法可靠区分 Chat 与 Responses，全部隐藏，不会静默按 Chat 处理。
-成本目前以 0 标记，表示未接入价格信息，不代表服务免费。
-Cursor/WorkBuddy 真账号尚未验证，不宣称兼容全部社区插件。
-没有提取 builtin Codex、Claude、Copilot、Gemini 账号逻辑，没有账号轮转、配额路由、gateway 转换、GUI、迁移工具或插件自动更新。普通 API 请直接用 Pi models.json。
+The full Go → Bun fixture plugin → Pi native OpenAI Chat SDK path has been tested for login, model discovery, text, tool calls, cancellation, and credential persistence across restarts.
+Only Chat Completions models from `@ai-sdk/openai-compatible` and Messages models from `@ai-sdk/anthropic` are exposed.
+The Anthropic path uses Pi's native implementation but has not had real-service or fixture verification. Responses/Gemini are unsupported. Because `@ai-sdk/openai` does not reliably distinguish Chat from Responses, all its models are hidden rather than silently treated as Chat.
+Costs are currently marked as 0 to indicate missing pricing information, not free service.
+Real Cursor/WorkBuddy accounts remain unverified; compatibility with all community plugins is not claimed.
+Built-in Codex, Claude, Copilot, and Gemini account logic has not been extracted. There is no account rotation, quota routing, gateway conversion, GUI, migration tooling, or automatic plugin updating. For ordinary APIs, use Pi's `models.json` directly.
 
-插件是受信任的本地代码，具有当前用户权限，不是安全沙箱。Windows 文件权限取决于用户目录 ACL；跨平台编译不等于平台运行验证。仅 Linux 实测。
+Plugins are trusted local code running with the current user's privileges, not a security sandbox. Windows file permissions depend on the user directory's ACL. Cross-platform compilation does not establish runtime support; only Linux has been tested at runtime.
 
-## 协议与生命周期
+## Protocol and lifecycle
 
-桥接协议 v1 使用固定 extraction.json 所锁定的 host JSON-lines 合约：
-请求 {id,method,params}；响应 {id,result} / {id,error}。
-fetch 先 head，再 base64 chunk，最后 result；credit 返回消费字节数加每帧 2048 的开销。
-每请求初始窗口 65536，ReadableStream pull 才归还额度；abort 取消同一 id。
-stdio 天然背压，Go 不缓冲完整响应。EOF 关闭 Bun stdin，2 秒后强制结束仍未退出的直接子进程。
-插件自行派生的孙进程不提供进程树隔离。host 崩溃使 pending 请求失败，不自动重试生成。
-没有本机监听端口。Go supervisor 只管理进程与状态权限，协议适配留在薄扩展中。
+Bridge protocol v1 uses the host JSON-lines contract pinned by `extraction.json`:
+requests `{id,method,params}`; responses `{id,result}` / `{id,error}`.
+Fetch sends a head, then base64 chunks, then a result. Credit returns the consumed byte count plus 2048 bytes of overhead per frame.
+Each request starts with a 65536-byte window; credit is returned only on `ReadableStream` pull. Abort cancels the same ID.
+Stdio provides backpressure; Go does not buffer complete responses. EOF closes Bun's stdin; direct children still running after two seconds are forcibly terminated.
+Plugin-spawned grandchildren are not contained as a process tree. A host crash fails pending requests; generation is not retried automatically.
+There is no local listening port. The Go supervisor manages only processes and state permissions; protocol adaptation stays in the thin extension.
 
-## 测试与更新
+## Testing and updates
 
 ```sh
 node scripts/extraction.mjs
@@ -111,36 +113,36 @@ go test -race ./...
 node scripts/build.mjs --all
 ```
 
-测试用临时状态目录和本地 fixture，不需要真实 token 或网络。
-Go 当前没有单独单元测试；主要行为由实际编译二进制集成测试覆盖。
-全平台产物在 bin/；部署时将对应产物命名为 magpie-pi（Windows 为 magpie-pi.exe），保留 vendor/ 和 extension/。
+Tests use temporary state directories and local fixtures, requiring neither real tokens nor network access.
+Go currently has no standalone unit tests; its main behavior is covered by integration tests using the compiled binary.
+Cross-platform artifacts are in `bin/`. For deployment, name the appropriate artifact `magpie-pi` (`magpie-pi.exe` on Windows) and retain `vendor/` and `extension/`.
 
-extraction.json 锁定来源 commit、每个文件 SHA-256、空补丁列表。vendor/LICENSE 为上游 MIT 许可证。
-升级时先阅读上游设计，审查差异，然后显式执行：
+`extraction.json` pins the source commit, per-file SHA-256 hashes, and an empty patch list. `vendor/LICENSE` contains the upstream MIT license.
+Before updating, read the upstream design and review changes, then explicitly run:
 
 ```sh
 node scripts/extraction.mjs extract /absolute/path/magpie
 node scripts/extraction.mjs
-# 重跑上述测试；检查新 extraction.json 后再发布
+# Rerun the tests above and review the new extraction.json before publishing.
 ```
 
-extract 从 git commit 读取字节，不复制工作区未提交修改；verify 检查本地 vendor 哈希。不修改 magpie 源码。
+Extraction reads bytes from the git commit, not uncommitted working-tree changes. Verification checks local vendor hashes. Neither modifies magpie's source.
 
-## 社区插件管理
+## Community plugin management
 
-已实现 Pi 1.6.0 原生菜单：直接输入 `/magpie-plugins`，用方向键选择、Enter 确认、Esc 退出。搜索输入关键词后选择包名、版本和描述，明确确认后按所选精确版本安装。也可查看已安装插件详情、卸载托管插件或直接输入包名。手动配置只读；取消不触发后续操作。无交互模式保留帮助和只读子命令，拒绝修改。菜单测试使用模拟 UI，未验证真实厂商服务或真实 Pi TUI。
+Native Pi 1.6.0 menus are implemented: enter `/magpie-plugins`, use arrow keys to select, Enter to confirm, and Esc to exit. Search by keyword, select a package, version, and description, then explicitly confirm installation of the exact selected version. You can also view installed-plugin details, uninstall managed plugins, or enter a package name directly. Manually configured plugins are read-only; cancellation triggers no subsequent actions. Noninteractive mode retains help and read-only subcommands but rejects mutations. Menu tests use mocked UI; neither real vendor services nor the live Pi TUI have been verified.
 
-保留原有子命令，空配置也可用：
+Text subcommands remain available, even with empty configuration:
 - `/magpie-plugins help`
 - `/magpie-plugins search cursor`
-- `/magpie-plugins install cursor`（或完整包名及 @精确版本）
+- `/magpie-plugins install cursor` (or a full package name with `@exact-version`)
 - `/magpie-plugins list`
 - `/magpie-plugins remove workbuddy`
 
-需要 npm。搜索仅查询 npm 元数据，限定社区 opencode-*-auth 包，不保证所有插件与当前 vendor host 兼容。cursor/workbuddy 是快捷别名。撤回的 antigravity-auth 不允许安装，agy-cli-auth 不受影响。
+Requires npm. Search queries npm metadata only and is restricted to community `opencode-*-auth` packages; compatibility with the current vendor host is not guaranteed. `cursor` and `workbuddy` are aliases. The withdrawn `antigravity-auth` cannot be installed; `agy-cli-auth` is unaffected.
 
-安装及移除必须 UI 明确确认，无交互模式拒绝修改。npm 使用 execFile、--ignore-scripts、--save-exact；禁用安装脚本不代表安全沙箱，运行插件仍拥有当前用户权限。下载使用独立 managed-plugins/pkg-* 目录，成功才原子替换配置并固定版本；失败保留原配置。跨进程锁拒绝并发修改，异常退出遗留 plugins.lock 时，确认没有操作运行后手动删除锁。
+Installation and removal require explicit UI confirmation; noninteractive mutations are rejected. npm runs through `execFile` with `--ignore-scripts` and `--save-exact`. Disabling install scripts is not a security sandbox: runtime plugins still have the current user's privileges. Downloads use separate `managed-plugins/pkg-*` directories; configuration is atomically replaced and the version pinned only on success. Failures preserve the original configuration. A cross-process lock rejects concurrent mutations. If a crash leaves `plugins.lock`, confirm no operation is running before manually deleting the lock.
 
-更新后必须重启 Pi，不尝试卸载运行中的代码。移除和替换版本将旧托管目录加入原子保存的删除队列，下次扩展启动、host 启动前删除。共享状态目录的 Pi 实例应全部退出再重启。凭据及手动插件永不删除。仅清理带本管理器所有权标记的 managed-plugins/pkg-* 目录；历史无标记目录或路径验证失败的目录保留，不能确认安全时需人工处理。配置保留无关字段，新文件权限 0600。外部编辑器不遵守管理锁时仍应避免同时写配置。JSON 损坏需手动修复；插件加载失败时命令仍可用于移除。
+Restart Pi after changes; running code is not unloaded. Removal and version replacement add old managed directories to an atomically saved deletion queue, processed at the next extension startup before the host starts. Exit all Pi instances sharing the state directory before restarting. Credentials and manually configured plugins are never deleted. Cleanup only removes `managed-plugins/pkg-*` directories with this manager's ownership marker. Legacy unmarked directories and directories that fail path validation are retained; cases whose safety cannot be established require manual handling. Unrelated configuration fields are preserved, and new files use mode 0600. Avoid simultaneous configuration writes from external editors that do not honor the management lock. Corrupt JSON requires manual repair; commands remain available for removal when a plugin fails to load.
 
-确定性测试使用临时目录、模拟 registry 与 npm，不安装真实插件到用户状态。
+Deterministic tests use temporary directories and mocked registry/npm operations, never installing real plugins into user state.
