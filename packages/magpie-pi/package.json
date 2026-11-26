@@ -1,6 +1,6 @@
 {
   "name": "magpie-pi",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Magpie community plugin integration for Pi",
   "license": "UNLICENSED",
   "keywords": [
@@ -20,14 +20,22 @@
     "directory": "packages/magpie-pi"
   },
   "type": "module",
+  "exports": {
+    "./embed": {
+      "types": "./extension/embed.d.ts",
+      "default": "./extension/embed.mjs"
+    },
+    "./extension/*": "./extension/*",
+    "./package.json": "./package.json"
+  },
   "pi": {
     "extensions": [
       "./extension/index.ts"
     ]
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": "1.6.0",
-    "@earendil-works/pi-coding-agent": "1.6.0"
+    "@earendil-works/pi-ai": "~1.6.0",
+    "@earendil-works/pi-coding-agent": "~1.6.0"
   },
   "scripts": {
     "build": "node scripts/build.mjs",

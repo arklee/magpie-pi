@@ -76,3 +76,46 @@ test("failed plugin initialization leaves manager accessible and notifies on ses
   await rm(state,{recursive:true,force:true});
  }
 });
+
+test("embedding API starts the host once and returns working providers",async()=>{
+ const {startMagpie}=await import("../extension/embed.mjs");
+ const root=await mkdtemp(path.join(os.tmpdir(),"magpie-embed-"));
+ try{
+  const empty=await startMagpie({state:path.join(root,"empty")});
+  assert.deepEqual([empty.providers,empty.errors],[[],[]]);
+  assert.deepEqual(JSON.parse(await readFile(path.join(root,"empty","config.json"),"utf8")).plugins,[]);
+  await empty.close();
+
+  const badState=path.join(root,"bad");
+  await import("node:fs/promises").then(fs=>fs.mkdir(badState));
+  await writeFile(path.join(badState,"config.json"),JSON.stringify({plugins:[{spec:"broken",target:path.join(badState,"missing.mjs")}]}));
+  const bad=await startMagpie({state:badState});
+  assert.equal(bad.providers.length,0);
+  assert.equal(bad.errors.length,1);
+  await bad.close();
+  await bad.close();
+
+  const state=path.join(root,"fixture");
+  await import("node:fs/promises").then(fs=>fs.mkdir(state));
+  await writeFile(path.join(state,"config.json"),JSON.stringify({plugins:[{spec:"fixture",target:path.resolve("tests/fixture.mjs")}]}));
+  const host=await startMagpie({state});
+  try{
+   assert.deepEqual(host.errors,[]);
+   const provider:any=host.providers[0];
+   assert.equal(provider.id,"magpie-fixture");
+   await provider.auth.apiKey.login({signal:new AbortController().signal,prompt:async(p:any)=>p.type==="select"?"0":"fixture-code",notify(){}});
+   const stream=provider.streamSimple(provider.getModels()[0],normalizeContext({messages:[{role:"user",content:"hello",timestamp:Date.now()}]}),{});
+   const result=await stream.result();
+   assert.notEqual(result.stopReason,"error",result.errorMessage);
+  }finally{await host.close();}
+  assert.equal(process.env.MAGPIE_PI_EMBEDDED,"1");
+ }finally{delete process.env.MAGPIE_PI_EMBEDDED;await new Promise(r=>setTimeout(r,100));await rm(root,{recursive:true,force:true})}
+});
+
+test("the Pi extension stays inactive in a process that embeds magpie",async()=>{
+ const previous=process.env.MAGPIE_PI_EMBEDDED;
+ process.env.MAGPIE_PI_EMBEDDED="1";
+ try{
+  await extension({registerCommand(){assert.fail("no command")},registerProvider(){assert.fail("no provider")},on(){assert.fail("no handlers")}} as any);
+ }finally{if(previous===undefined)delete process.env.MAGPIE_PI_EMBEDDED;else process.env.MAGPIE_PI_EMBEDDED=previous;}
+});

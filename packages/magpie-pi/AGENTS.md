@@ -18,7 +18,12 @@ features from planned work and real-vendor compatibility from fixture coverage.
 - `main.go`: small Go supervisor for the Bun host, private state and child lifecycle.
 - `vendor/host.js`: pinned upstream OpenCode plugin host; Bun executes community plugins.
 - `extension/bridge.mjs`: RPC, streaming responses, credit flow and cancellation.
-- `extension/index.ts`: startup, provider registration, authentication and model integration.
+- `extension/providers.mjs`: config/state handling, host startup and Pi provider definitions
+  (authentication and model integration), shared by both entry points.
+- `extension/index.ts`: Pi extension entry; registers the providers and `/magpie-plugins`.
+- `extension/embed.mjs` (`magpie-pi/embed`): embedding API for SDK hosts that share one model
+  runtime across sessions; starts the host once and returns provider definitions. Keep it
+  behaviorally identical to the extension.
 - `extension/plugins.mjs`: plugin discovery, transactional installation, deferred cleanup
   and native Pi TUI menus.
 - `scripts/`: reproducible extraction and platform builds.
