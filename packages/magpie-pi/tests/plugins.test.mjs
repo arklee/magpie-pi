@@ -37,9 +37,12 @@ test("registry, transactional install/remove, failure, cancellation, lock",async
  await writeFile(file,JSON.stringify(original));
  let runs=0,fail=false;
  const manager=new PluginManager(state,{
+  bun:"/fake/bun",
   fetcher:async url=>({ok:true,json:async()=>url.includes("/-/v1/search")?{objects:[{package:{name,version:"1.2.3"}},{package:{name:"@magpie-community/opencode-antigravity-auth"}},{package:{name:"unrelated"}}]}:{"dist-tags":{latest:"1.2.3"},versions:{"1.2.3":{}}}}),
   runner:async(command,args,options)=>{
-   runs++;assert.equal(command,"npm");assert.ok(args.includes("--ignore-scripts"));assert.ok(args.includes("--save-exact"));
+   runs++;assert.equal(command,"/fake/bun");
+   assert.deepEqual(args,["add","--exact","--ignore-scripts","--linker=hoisted","--no-progress","--registry=https://registry.npmjs.org",name+"@1.2.3"]);
+   assert.equal(options.windowsHide,true);
    if(fail)throw Error("download failed");
    const target=path.join(options.cwd,"node_modules",name);
    await mkdir(target,{recursive:true});await writeFile(path.join(target,"package.json"),JSON.stringify({name,version:"1.2.3"}));
@@ -64,5 +67,13 @@ test("registry, transactional install/remove, failure, cancellation, lock",async
   assert.deepEqual(JSON.parse(await readFile(file,"utf8")),{...original,pendingPluginDeletes:[]});
   await writeFile(file,JSON.stringify({...original,plugins:[{spec:name,target:"/manual"}]}));
   await assert.rejects(()=>manager.mutate("remove","cursor",async()=>true),/manual/);
+ }finally{await rm(state,{recursive:true,force:true})}
+});
+test("cleanup of an existing state directory without config is a no-op",async()=>{
+ const state=await mkdtemp(path.join(os.tmpdir(),"magpie-noconfig-"));
+ try{
+  await new PluginManager(state).cleanup();
+  await assert.rejects(()=>readFile(path.join(state,"config.json")),{code:"ENOENT"});
+  await assert.rejects(()=>readFile(path.join(state,"plugins.lock")),{code:"ENOENT"});
  }finally{await rm(state,{recursive:true,force:true})}
 });

@@ -19,11 +19,11 @@ async function install(_cmd,_args,{cwd}){
 test("real overlapping operations reject under the lock",()=>fixture(async state=>{
  let entered,release;
  const started=new Promise(r=>entered=r),gate=new Promise(r=>release=r);
- const first=new PluginManager(state,{fetcher,runner:async(...args)=>{entered();await gate;await install(...args)}});
+ const first=new PluginManager(state,{bun:"/fake/bun",fetcher,runner:async(...args)=>{entered();await gate;await install(...args)}});
  const pending=first.mutate("install","cursor@1.2.3",async()=>true);
  await started;
  try{
-  const second=new PluginManager(state,{fetcher,runner:async()=>assert.fail("second runner")});
+  const second=new PluginManager(state,{bun:"/fake/bun",fetcher,runner:async()=>assert.fail("second runner")});
   await assert.rejects(()=>second.mutate("remove","cursor",async()=>true),/Another plugin operation/);
  }finally{release();await pending}
  assert.equal((await first.list()).length,1);
@@ -51,7 +51,7 @@ test("symlink managed root is refused without touching destination",()=>fixture(
  const outside=await mkdtemp(path.join(os.tmpdir(),"magpie-outside-"));
  try{
   await symlink(outside,path.join(state,"managed-plugins"),"dir");
-  const manager=new PluginManager(state,{fetcher,runner:async()=>assert.fail("must not run")});
+  const manager=new PluginManager(state,{bun:"/fake/bun",fetcher,runner:async()=>assert.fail("must not run")});
   await assert.rejects(()=>manager.mutate("install","cursor",async()=>true),/symlink/);
   assert.deepEqual(await readdir(outside),[]);
  }finally{await rm(outside,{recursive:true,force:true})}
@@ -59,7 +59,7 @@ test("symlink managed root is refused without touching destination",()=>fixture(
 test("external config change survives aborted activation",()=>fixture(async state=>{
  const file=path.join(state,"config.json");
  const external={plugins:[],accounts:{cursor:"secret"},unrelated:43,newField:"keep"};
- const manager=new PluginManager(state,{fetcher,runner:async(...args)=>{
+ const manager=new PluginManager(state,{bun:"/fake/bun",fetcher,runner:async(...args)=>{
   await install(...args);await writeFile(file,JSON.stringify(external));
  }});
  await assert.rejects(()=>manager.mutate("install","cursor",async()=>true),/Configuration changed during the operation/);

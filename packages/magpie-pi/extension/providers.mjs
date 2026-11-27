@@ -7,6 +7,7 @@ import os from "node:os";
 // The Pi extension loader exposes the compat entry, not the per-API subpaths.
 import {openAICompletionsApi,anthropicMessagesApi} from "@earendil-works/pi-ai/compat";
 import {Bridge} from "./bridge.mjs";
+import {ensureBun} from "./bun.mjs";
 import {supervisorPath} from "./platform.mjs";
 
 export const packageRoot=fileURLToPath(new URL("..",import.meta.url));
@@ -33,7 +34,8 @@ export async function loadConfig(state){
 }
 
 /** Start the plugin host for a non-empty config. Throws if the supervisor is unavailable. */
-export function startBridge(state,bun=process.env.MAGPIE_PI_BUN){
+export async function startBridge(state,bun=undefined){
+ bun ??= await ensureBun(state);
  return new Bridge(supervisorPath(packageRoot),path.join(packageRoot,"vendor","host.js"),state,bun);
 }
 

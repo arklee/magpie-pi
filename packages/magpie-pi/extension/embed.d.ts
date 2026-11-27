@@ -34,7 +34,7 @@ export interface MagpieSearchResult {
 }
 
 export class PluginManager {
-	constructor(state: string, options?: { fetcher?: typeof fetch; runner?: unknown });
+	constructor(state: string, options?: { bun?: string; fetcher?: typeof fetch; runner?: unknown });
 	cleanup(): Promise<void>;
 	search(query: string): Promise<MagpieSearchResult[]>;
 	list(): Promise<MagpiePluginEntry[]>;

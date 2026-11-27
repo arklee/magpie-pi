@@ -8,14 +8,14 @@ Derived from [yetone/magpie](https://github.com/yetone/magpie), with its OpenCod
 
 ## Installation
 
-Requires **Pi 1.6.0**, **Bun** to run community plugins, and **Node.js/npm** for plugin installation and management.
+Requires **Pi 1.6.0**.
 
 ```sh
 pi install npm:magpie-pi
 pi
 ```
 
-The npm package includes prebuilt supervisor binaries: **no Go installation or build command is needed**. Bun is required to run configured community plugins (tested with 1.3.14), not to load the extension or open its plugin manager.
+The package includes a prebuilt supervisor. The first plugin installation or startup downloads Bun once (~25–40 MB) and stores it under `bun/` in the state directory.
 
 ## Usage
 

@@ -17,6 +17,7 @@ features from planned work and real-vendor compatibility from fixture coverage.
 
 - `main.go`: small Go supervisor for the Bun host, private state and child lifecycle.
 - `vendor/host.js`: pinned upstream OpenCode plugin host; Bun executes community plugins.
+- `extension/bun.mjs`: pinned Bun download, verification and atomic installation.
 - `extension/bridge.mjs`: RPC, streaming responses, credit flow and cancellation.
 - `extension/providers.mjs`: config/state handling, host startup and Pi provider definitions
   (authentication and model integration), shared by both entry points.
@@ -75,7 +76,7 @@ plugin credentials. Keep ordinary logs free of secrets.
 - Search metadata without executing package code. Require explicit interactive
   confirmation before installation or removal; reject unconfirmed noninteractive mutations.
 - Validate package names and exact versions. Use argument arrays, not shell interpolation.
-- Keep npm install scripts disabled; explain that runtime plugins still have user privileges.
+- Keep install scripts disabled; explain that runtime plugins still have user privileges.
 - Do not offer the withdrawn Antigravity auth plugin to new users; agy-cli is distinct.
 - Preserve atomic config writes, mutation locking, rollback and unrelated config fields.
 - Never overwrite manually configured plugins or delete paths outside owned managed stages.

@@ -1,10 +1,14 @@
-import {test} from "node:test";
+import {before,after,test} from "node:test";
 import assert from "node:assert/strict";
 import {mkdtemp,writeFile,rm,readFile,stat} from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import extension from "../extension/index";
 import {normalizeContext} from "@earendil-works/pi-ai/utils/transcript";
+// This suite runs under Bun. Use that executable for all fixture hosts.
+const previousBun=process.env.MAGPIE_PI_BUN;
+before(()=>{process.env.MAGPIE_PI_BUN=process.execPath});
+after(()=>{if(previousBun===undefined)delete process.env.MAGPIE_PI_BUN;else process.env.MAGPIE_PI_BUN=previousBun});
 test("first launch creates private config without starting a host",async()=>{
  const root=await mkdtemp(path.join(os.tmpdir(),"magpie-first-"));
  const state=path.join(root,"new-state");

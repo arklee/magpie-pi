@@ -2,6 +2,7 @@ import {readFile,writeFile,mkdir,rename,rm,mkdtemp,lstat,realpath} from "node:fs
 import path from "node:path";
 import {execFile} from "node:child_process";
 import {promisify} from "node:util";
+import {ensureBun} from "./bun.mjs";
 const scope="@magpie-community/opencode-";
 const withdrawn=scope+"antigravity-auth";
 export function parse(input){
@@ -12,8 +13,8 @@ export function parse(input){
  return {name:m[1],version:m[2]};
 }
 export class PluginManager{
- constructor(state,{fetcher=fetch,runner=promisify(execFile)}={}){
-  this.state=state;this.file=path.join(state,"config.json");this.fetcher=fetcher;this.runner=runner;
+ constructor(state,{bun,fetcher=fetch,runner=promisify(execFile)}={}){
+  this.bun=bun;this.state=state;this.file=path.join(state,"config.json");this.fetcher=fetcher;this.runner=runner;
  }
  // Queue entries are identifiers, never filesystem paths. Only our marked stages qualify.
  stageEntry(p){
@@ -30,7 +31,9 @@ export class PluginManager{
   const lock=path.join(this.state,"plugins.lock");
   try{await mkdir(lock,{mode:0o700})}catch(e){if(e.code==="ENOENT"||e.code==="EEXIST")return;throw e}
   try{
-   const before=await readFile(this.file,"utf8"),c=JSON.parse(before);
+   let before;
+   try{before=await readFile(this.file,"utf8")}catch(e){if(e.code==="ENOENT")return;throw e}
+   const c=JSON.parse(before);
    if(!Array.isArray(c.pendingPluginDeletes)||!Array.isArray(c.plugins))return;
    const root=path.join(path.resolve(this.state),"managed-plugins");
    const remaining=[];
@@ -94,9 +97,10 @@ export class PluginManager{
     const root=path.join(this.state,"managed-plugins");
     await mkdir(root,{recursive:true,mode:0o700});
     if((await lstat(root)).isSymbolicLink()||await realpath(root)!==path.join(await realpath(this.state),"managed-plugins"))throw Error("managed-plugins must not be a symlink");
+    const bun=this.bun ?? await ensureBun(this.state,{fetcher:this.fetcher});
     stage=await mkdtemp(path.join(root,"pkg-"));
     await writeFile(path.join(stage,"package.json"),'{"private":true}',{mode:0o600});
-    await this.runner("npm",["install","--ignore-scripts","--save-exact","--no-audit","--no-fund","--registry=https://registry.npmjs.org",name+"@"+resolved],{cwd:stage,timeout:120000,maxBuffer:1024*1024});
+    await this.runner(bun,["add","--exact","--ignore-scripts","--linker=hoisted","--no-progress","--registry=https://registry.npmjs.org",name+"@"+resolved],{cwd:stage,timeout:120000,maxBuffer:1024*1024,windowsHide:true});
     const target=path.join(stage,"node_modules",name);
     const installed=JSON.parse(await readFile(path.join(target,"package.json"),"utf8"));
     if(installed.name!==name||installed.version!==resolved)throw Error("Installed package metadata does not match");
@@ -116,7 +120,7 @@ export class PluginManager{
 const help="/magpie-plugins search QUERY | install PACKAGE[@EXACT_VERSION] | list | remove PACKAGE. Aliases: cursor/workbuddy. Searches community auth packages only; compatibility is not guaranteed.";
 async function change(manager,ctx,action,input){
  return manager.mutate(action,input,async()=>{
-  const ok=await ctx.ui.confirm(action+" "+input,"Third-party plugins run with your user permissions. Disabling npm install scripts does not sandbox runtime code. Removal preserves credentials; old managed directories are deleted on next startup (including versions replaced by updates). Continue?");
+  const ok=await ctx.ui.confirm(action+" "+input,"Third-party plugins run with your user permissions. Disabling install scripts does not sandbox runtime code. Removal preserves credentials; old managed directories are deleted on next startup (including versions replaced by updates). Continue?");
   if(ok)ctx.ui.notify((action==="install"?"Installing":"Removing")+"…","info");
   return ok;
  });
@@ -170,7 +174,7 @@ export function registerPlugins(pi,state,dependencies={}){
    else if(action==="list")result=JSON.stringify(await manager.list(),null,2);
    else if(["install","remove"].includes(action)){
     if(!ctx.hasUI)throw Error("Changes refused: explicit confirmation in an interactive UI is required");
-    result=await manager.mutate(action,input,name=>ctx.ui.confirm(action+" "+name,"Third-party plugins run with your user permissions. Disabling npm install scripts does not sandbox runtime code. Removal preserves credentials; old managed directories are deleted on next startup (including versions replaced by updates). Continue?"));
+    result=await manager.mutate(action,input,name=>ctx.ui.confirm(action+" "+name,"Third-party plugins run with your user permissions. Disabling install scripts does not sandbox runtime code. Removal preserves credentials; old managed directories are deleted on next startup (including versions replaced by updates). Continue?"));
    }else result="/magpie-plugins search QUERY | install PACKAGE[@EXACT_VERSION] | list | remove PACKAGE. Aliases: cursor/workbuddy. Searches community auth packages only; compatibility is not guaranteed.";
    ctx.ui.notify(result,"info");
   }catch(e){ctx.ui.notify(String(e),"error")}

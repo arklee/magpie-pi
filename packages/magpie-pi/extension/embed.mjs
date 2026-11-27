@@ -20,7 +20,7 @@ export {defaultState} from "./providers.mjs";
  * Pi provider definitions. Never throws for configuration or plugin problems: they are returned in
  * `errors` (with no providers) so the embedder keeps working; `close()` is always safe to call.
  *
- * @param {{state?: string, bun?: string}} [options]
+ * @param {{state?: string, bun?: string}} [options] The bun option overrides the downloaded Bun executable.
  * @returns {Promise<{state: string, configPath: string, providers: any[], errors: string[], close: () => Promise<void>}>}
  */
 export async function startMagpie(options={}){
@@ -35,7 +35,7 @@ export async function startMagpie(options={}){
  const {config,configPath}=loaded;
  if(config.plugins.length===0)return {state,configPath,providers:[],errors:[],close:none};
  let bridge;
- try {bridge=startBridge(state,options.bun);}
+ try {bridge=await startBridge(state,options.bun);}
  catch(e){return {state,configPath,providers:[],errors:[String(e)],close:none};}
  const close=()=>bridge.close().then(()=>undefined);
  try {

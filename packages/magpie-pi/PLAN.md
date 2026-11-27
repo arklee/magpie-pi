@@ -52,13 +52,13 @@ Release validation of 0.1.0:
 - `/magpie-plugins list`
 - `/magpie-plugins remove workbuddy`
 
-需要 npm。搜索仅查询 npm 元数据，限定社区 opencode-*-auth 包，不保证所有插件与当前 vendor host 兼容。cursor/workbuddy 是快捷别名。撤回的 antigravity-auth 不允许安装，agy-cli-auth 不受影响。
+搜索仅查询 npm 元数据，限定社区 opencode-*-auth 包，不保证所有插件与当前 vendor host 兼容。cursor/workbuddy 是快捷别名。撤回的 antigravity-auth 不允许安装，agy-cli-auth 不受影响。
 
-安装及移除必须 UI 明确确认，无交互模式拒绝修改。npm 使用 execFile、--ignore-scripts、--save-exact；禁用安装脚本不代表安全沙箱，运行插件仍拥有当前用户权限。下载使用独立 managed-plugins/pkg-* 目录，成功才原子替换配置并固定版本；失败保留原配置。跨进程锁拒绝并发修改，异常退出遗留 plugins.lock 时，确认没有操作运行后手动删除锁。
+安装及移除必须 UI 明确确认，无交互模式拒绝修改。Bun 使用 execFile、bun add --ignore-scripts --exact；禁用安装脚本不代表安全沙箱，运行插件仍拥有当前用户权限。下载使用独立 managed-plugins/pkg-* 目录，成功才原子替换配置并固定版本；失败保留原配置。跨进程锁拒绝并发修改，异常退出遗留 plugins.lock 时，确认没有操作运行后手动删除锁。
 
 更新后必须重启 Pi，不尝试卸载运行中的代码。移除停用配置并将旧托管目录排队，下次启动、host 启动前安全清理；不删除凭据或手动插件。配置保留无关字段，新文件权限 0600。外部编辑器不遵守管理锁时仍应避免同时写配置。JSON 损坏需手动修复；插件加载失败时命令仍可用于移除。
 
-确定性测试使用临时目录、模拟 registry 与 npm，不安装真实插件到用户状态。
+确定性测试使用临时目录、模拟 registry 与 Bun 安装器，不安装真实插件到用户状态。
 
 ## Monorepo migration
 

@@ -17,8 +17,8 @@ export default async function(pi:ExtensionAPI){
   });
   return;
  }
- let bridge:ReturnType<typeof startBridge>;
- try {bridge=startBridge(state);}catch(e){
+ let bridge:Awaited<ReturnType<typeof startBridge>>;
+ try {bridge=await startBridge(state);}catch(e){
   pi.on("session_start",async(_event,ctx)=>{if(ctx.hasUI)ctx.ui.notify(String(e),"error")});
   return;
  }
