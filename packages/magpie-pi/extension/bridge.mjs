@@ -3,7 +3,7 @@ import {createInterface} from "node:readline";
 export class Bridge {
  constructor(binary,host,state,bun="bun") {
   this.next=0; this.pending=new Map();
-  this.child=spawn(binary,["--host",host,"--state",state,"--bun",bun],{stdio:["pipe","pipe","inherit"]});
+  this.child=spawn(binary,["--host",host,"--state",state,"--bun",bun],{stdio:["pipe","pipe","inherit"],windowsHide:true});
   this.closed=new Promise(resolve=>this.child.once("close",resolve));
   this.child.on("error",e=>this.fail(e));
   this.child.stdin.on("error",e=>this.fail(e));
