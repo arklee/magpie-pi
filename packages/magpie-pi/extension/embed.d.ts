@@ -17,7 +17,17 @@ export interface MagpieHost {
 }
 
 /** Also sets MAGPIE_PI_EMBEDDED=1: the Pi extension stays inactive in this process. */
-export function startMagpie(options?: { state?: string; bun?: string }): Promise<MagpieHost>;
+export function startMagpie(options?: { state?: string; bun?: string; mirror?: string }): Promise<MagpieHost>;
+
+export const BUN_VERSION: string;
+export const bunMirrors: Readonly<Record<"github" | "npmmirror" | "npmmirror-cdn", string>>;
+export function bunDownloadBase(mirror?: string): string;
+export function bunReady(options?: { state?: string }): Promise<boolean>;
+export function prepareBun(options?: {
+ state?: string;
+ mirror?: string;
+ onProgress?: (progress: { received: number; total?: number }) => void;
+}): Promise<string>;
 
 export function defaultState(): string;
 
@@ -34,7 +44,7 @@ export interface MagpieSearchResult {
 }
 
 export class PluginManager {
-	constructor(state: string, options?: { bun?: string; fetcher?: typeof fetch; runner?: unknown });
+	constructor(state: string, options?: { bun?: string; mirror?: string; fetcher?: typeof fetch; runner?: unknown });
 	cleanup(): Promise<void>;
 	search(query: string): Promise<MagpieSearchResult[]>;
 	list(): Promise<MagpiePluginEntry[]>;

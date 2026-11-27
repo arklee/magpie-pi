@@ -54,9 +54,15 @@ async function regularFile(file) {
  catch (err) { if (err.code === "ENOENT") return false; throw err; }
 }
 
-async function download(url, fetcher) {
+export async function bunReady(state, {override = process.env.MAGPIE_PI_BUN} = {}) {
+ return !!override || regularFile(managedBunPath(state));
+}
+
+async function download(url, fetcher, onProgress) {
  const res = await fetcher(url, {signal: AbortSignal.timeout(600000)});
- if (!res.ok || Number(res.headers.get("content-length")) > sizeLimit) {
+ const length = Number(res.headers.get("content-length"));
+ const total = length > 0 ? length : undefined;
+ if (!res.ok || length > sizeLimit) {
   await res.body?.cancel();
   throw Error(res.ok ? "download exceeds 200 MiB" : "HTTP " + res.status);
  }
@@ -66,6 +72,7 @@ async function download(url, fetcher) {
   bytes += chunk.length;
   if (bytes > sizeLimit) throw Error("download exceeds 200 MiB");
   chunks.push(chunk);
+  try { onProgress?.({received: bytes, total}); } catch {}
  }
  return Buffer.concat(chunks, bytes);
 }
@@ -118,14 +125,16 @@ function extract(zip) {
  return result;
 }
 
-async function install(exe, target, base, sums, fetcher) {
+async function install(exe, target, base, sums, fetcher, onProgress) {
  const archive = target + ".zip";
  const url = `${base}/bun-v${BUN_VERSION}/${archive}`;
- let zip;
- try { zip = await download(url, fetcher); }
+ let binary;
+ try {
+  const zip = await download(url, fetcher, onProgress);
+  if (createHash("sha256").update(zip).digest("hex") !== sums[archive]) throw Error("SHA-256 checksum mismatch");
+  binary = extract(zip);
+ }
  catch (err) { throw Error(`download ${url} failed: ${err.message ?? err}${err.cause?.message ? ": " + err.cause.message : ""}`); }
- if (createHash("sha256").update(zip).digest("hex") !== sums[archive]) throw Error("SHA-256 checksum mismatch");
- const binary = extract(zip);
  const dir = path.dirname(exe);
  const root = path.dirname(dir);
  for (const directory of [root, dir]) {
@@ -147,7 +156,7 @@ async function install(exe, target, base, sums, fetcher) {
 }
 
 export async function ensureBun(state, {fetcher = fetch, override = process.env.MAGPIE_PI_BUN,
- base, target, sums = sumsByZip} = {}) {
+ base, mirror, onProgress, target, sums = sumsByZip} = {}) {
  if (override) return override;
  const exe = managedBunPath(state);
  try {
@@ -155,7 +164,8 @@ export async function ensureBun(state, {fetcher = fetch, override = process.env.
   target ??= bunTarget({platform: process.platform, arch: process.arch,
    musl: process.platform === "linux" && !process.report?.getReport?.()?.header?.glibcVersionRuntime});
   if (!pending.has(exe)) {
-   pending.set(exe, install(exe, target, base ?? bunDownloadBase(), sums, fetcher).finally(() => pending.delete(exe)));
+   base ??= bunDownloadBase(typeof mirror === "string" ? mirror : undefined);
+   pending.set(exe, install(exe, target, base, sums, fetcher, onProgress).finally(() => pending.delete(exe)));
   }
   return await pending.get(exe);
  } catch (err) {

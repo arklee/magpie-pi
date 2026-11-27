@@ -43,12 +43,19 @@ pi
 通过 SDK 运行 Pi、并且多个会话共用一个模型运行时的宿主程序（例如 GUI 后端），不应在每个会话里加载扩展，而应使用嵌入 API：它只启动一次插件宿主，返回 Pi provider 定义，由宿主注册到自己的运行时中。
 
 ```js
-import {startMagpie, PluginManager} from "magpie-pi/embed";
+import {prepareBun, startMagpie, PluginManager} from "magpie-pi/embed";
 
 const magpie = await startMagpie(); // {providers, errors, close}
 for (const provider of magpie.providers) modelRuntime.registerProvider(provider.id, provider);
 // 用 PluginManager 安装或卸载插件后，close() 再重新启动即可生效。
 await magpie.close();
+```
+
+启动宿主前可先准备 Bun，指定下载镜像并按字节显示进度。
+
+```js
+const bun = await prepareBun({mirror, onProgress});
+const host = await startMagpie({bun, mirror});
 ```
 
 配置和插件问题通过 `errors` 返回，不会抛出异常。`startMagpie()` 会设置 `MAGPIE_PI_EMBEDDED=1`，因此即使用户同时把它装成了 Pi 包，扩展在该进程里也不会生效。登录走 Pi 的 `AuthInteraction` 协议，因此由宿主自己的登录界面驱动插件登录。

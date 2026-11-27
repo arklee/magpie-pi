@@ -8,10 +8,21 @@
 //   for (const provider of magpie.providers) modelRuntime.registerProvider(provider.id, provider);
 //   ...
 //   await magpie.close();
+import {bunReady as ready,ensureBun} from "./bun.mjs";
 import {PluginManager} from "./plugins.mjs";
 import {createProviders,defaultState,loadConfig,startBridge} from "./providers.mjs";
 
 export {PluginManager,parse} from "./plugins.mjs";
+export {BUN_VERSION,bunDownloadBase,bunMirrors} from "./bun.mjs";
+
+export function prepareBun({state=defaultState(),mirror,onProgress}={}){
+ return ensureBun(state,{mirror,onProgress});
+}
+
+export function bunReady({state=defaultState()}={}){
+ return ready(state);
+}
+
 export {defaultState} from "./providers.mjs";
 
 /**
@@ -20,7 +31,7 @@ export {defaultState} from "./providers.mjs";
  * Pi provider definitions. Never throws for configuration or plugin problems: they are returned in
  * `errors` (with no providers) so the embedder keeps working; `close()` is always safe to call.
  *
- * @param {{state?: string, bun?: string}} [options] The bun option overrides the downloaded Bun executable.
+ * @param {{state?: string, bun?: string, mirror?: string}} [options] The bun option overrides the downloaded Bun executable.
  * @returns {Promise<{state: string, configPath: string, providers: any[], errors: string[], close: () => Promise<void>}>}
  */
 export async function startMagpie(options={}){
@@ -35,7 +46,7 @@ export async function startMagpie(options={}){
  const {config,configPath}=loaded;
  if(config.plugins.length===0)return {state,configPath,providers:[],errors:[],close:none};
  let bridge;
- try {bridge=await startBridge(state,options.bun);}
+ try {bridge=await startBridge(state,options.bun,options.mirror);}
  catch(e){return {state,configPath,providers:[],errors:[String(e)],close:none};}
  const close=()=>bridge.close().then(()=>undefined);
  try {

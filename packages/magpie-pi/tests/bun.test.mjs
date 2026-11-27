@@ -5,7 +5,7 @@ import {mkdir, mkdtemp, readFile, readdir, rm, stat} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {deflateRawSync} from "node:zlib";
-import {BUN_VERSION, bunDownloadBase, bunTarget, ensureBun, managedBunPath} from "../extension/bun.mjs";
+import {BUN_VERSION, bunDownloadBase, bunTarget, bunReady, ensureBun, managedBunPath} from "../extension/bun.mjs";
 
 test("Bun release targets", () => {
  for (const [platform, arch, musl, expected] of [
@@ -58,9 +58,9 @@ async function fixture(t, method = 8) {
    calls++;
    assert.ok(signal instanceof AbortSignal);
    assert.equal(url, `https://fixture.invalid/bun-v${BUN_VERSION}/${target}.zip`);
-   return new Response(zip);
+   return new Response(new ReadableStream({start(c){c.enqueue(zip.subarray(0,5));c.enqueue(zip.subarray(5));c.close();}}), {headers:{"content-length":String(zip.length)}});
   }};
- return {state, exe, options, calls: () => calls};
+ return {state, exe, options, size:zip.length, calls: () => calls};
 }
 
 for (const method of [0, 8]) test("installs and reuses Bun, ZIP method " + method, async t => {
@@ -115,6 +115,8 @@ test("mirror from the environment is used and still checksum-verified", async t 
  assert.deepEqual(urls, [`https://registry.npmmirror.com/-/binary/bun/bun-v${BUN_VERSION}/fixture-target.zip`]);
  process.env.MAGPIE_PI_BUN_MIRROR = "http://insecure.invalid";
  await assert.rejects(ensureBun(state, rest), /MAGPIE_PI_BUN_MIRROR must be an HTTPS/);
+ await assert.rejects(ensureBun(state, {...rest, mirror:"invalid"}), /must be/);
+ assert.equal(await ensureBun(state, {...rest, mirror:base}), managedBunPath(state));
  assert.equal(await ensureBun(state, {...rest, override: "custom bun"}), "custom bun");
 });
 
@@ -129,4 +131,17 @@ test("explicit override bypasses download", async t => {
  const {state, options, calls} = await fixture(t);
  assert.equal(await ensureBun(state, {...options, override: "custom bun"}), "custom bun");
  assert.equal(calls(), 0);
+});
+
+test("installation reports bytes and makes Bun ready for embedding", async t => {
+ const {state, exe, options, size} = await fixture(t);
+ assert.equal(await bunReady(state, {override:""}), false);
+ assert.equal(await bunReady(state, {override:"custom"}), true);
+ const progress = [];
+ await ensureBun(state, {...options,onProgress(p){progress.push(p);throw Error("observer");}});
+ assert.deepEqual(progress, [{received:5,total:size},{received:size,total:size}]);
+ assert.equal(await bunReady(state, {override:""}), true);
+ const embed = await import("../extension/embed.mjs");
+ assert.equal(await embed.bunReady({state}), true);
+ assert.equal(await embed.prepareBun({state}), process.env.MAGPIE_PI_BUN || exe);
 });

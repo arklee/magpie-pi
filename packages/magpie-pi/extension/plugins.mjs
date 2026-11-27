@@ -13,8 +13,8 @@ export function parse(input){
  return {name:m[1],version:m[2]};
 }
 export class PluginManager{
- constructor(state,{bun,fetcher=fetch,runner=promisify(execFile)}={}){
-  this.bun=bun;this.state=state;this.file=path.join(state,"config.json");this.fetcher=fetcher;this.runner=runner;
+ constructor(state,{bun,mirror,fetcher=fetch,runner=promisify(execFile)}={}){
+  this.bun=bun;this.mirror=mirror;this.state=state;this.file=path.join(state,"config.json");this.fetcher=fetcher;this.runner=runner;
  }
  // Queue entries are identifiers, never filesystem paths. Only our marked stages qualify.
  stageEntry(p){
@@ -97,7 +97,7 @@ export class PluginManager{
     const root=path.join(this.state,"managed-plugins");
     await mkdir(root,{recursive:true,mode:0o700});
     if((await lstat(root)).isSymbolicLink()||await realpath(root)!==path.join(await realpath(this.state),"managed-plugins"))throw Error("managed-plugins must not be a symlink");
-    const bun=this.bun ?? await ensureBun(this.state,{fetcher:this.fetcher});
+    const bun=this.bun ?? await ensureBun(this.state,{fetcher:this.fetcher,mirror:this.mirror});
     stage=await mkdtemp(path.join(root,"pkg-"));
     await writeFile(path.join(stage,"package.json"),'{"private":true}',{mode:0o600});
     await this.runner(bun,["add","--exact","--ignore-scripts","--linker=hoisted","--no-progress","--registry=https://registry.npmjs.org",name+"@"+resolved],{cwd:stage,timeout:120000,maxBuffer:1024*1024,windowsHide:true});

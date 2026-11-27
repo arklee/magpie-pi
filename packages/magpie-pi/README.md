@@ -43,12 +43,19 @@ Configuration is created automatically in `~/.local/share/magpie-pi`; manual JSO
 Hosts that run Pi through its SDK with one shared model runtime for many sessions (for example a GUI backend) should not load the extension per session. Use the embedding API instead: it starts the plugin host once and returns Pi provider definitions to register in the host's own runtime.
 
 ```js
-import {startMagpie, PluginManager} from "magpie-pi/embed";
+import {prepareBun, startMagpie, PluginManager} from "magpie-pi/embed";
 
 const magpie = await startMagpie(); // {providers, errors, close}
 for (const provider of magpie.providers) modelRuntime.registerProvider(provider.id, provider);
 // After installing or removing plugins with PluginManager, close() and start again to apply them.
 await magpie.close();
+```
+
+Prepare Bun before starting the host to select a download mirror and report byte progress.
+
+```js
+const bun = await prepareBun({mirror, onProgress});
+const host = await startMagpie({bun, mirror});
 ```
 
 Configuration and plugin problems are returned in `errors` instead of being thrown. `startMagpie()` sets `MAGPIE_PI_EMBEDDED=1`, so the Pi extension stays inactive in that process even if a user also installed it as a Pi package. Login uses Pi's `AuthInteraction` protocol, so the host's own login UI drives plugin sign-in.

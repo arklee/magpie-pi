@@ -64,3 +64,4 @@ See [PLAN.md](../PLAN.md) for implementation status. `extraction.json` records u
 
 If a service is missing from `/login`, restart Pi and check startup errors. If no models appear, the plugin may not expose a supported protocol.
 
+Embedders can check `bunReady({state})` and call `prepareBun({state, mirror, onProgress})` to receive byte counts during installation. Both `startMagpie` and `PluginManager` accept an explicit mirror.

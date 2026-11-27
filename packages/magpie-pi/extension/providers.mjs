@@ -34,8 +34,8 @@ export async function loadConfig(state){
 }
 
 /** Start the plugin host for a non-empty config. Throws if the supervisor is unavailable. */
-export async function startBridge(state,bun=undefined){
- bun ??= await ensureBun(state);
+export async function startBridge(state,bun=undefined,mirror=undefined){
+ bun ??= await ensureBun(state,{mirror});
  return new Bridge(supervisorPath(packageRoot),path.join(packageRoot,"vendor","host.js"),state,bun);
 }
 
