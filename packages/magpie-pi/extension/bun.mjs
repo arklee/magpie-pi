@@ -4,6 +4,24 @@ import path from "node:path";
 import * as zlib from "node:zlib";
 
 export const BUN_VERSION = "1.4.2";
+// Explicit download sources; every source is checked against the pinned SHA-256 sums below.
+export const bunMirrors = Object.freeze({
+ github: "https://github.com/oven-sh/bun/releases/download",
+ npmmirror: "https://registry.npmmirror.com/-/binary/bun",
+ "npmmirror-cdn": "https://cdn.npmmirror.com/binaries/bun",
+});
+
+export function bunDownloadBase(value = process.env.MAGPIE_PI_BUN_MIRROR) {
+ const input = value?.trim() || "github";
+ const base = Object.hasOwn(bunMirrors, input) ? bunMirrors[input] : input;
+ let url;
+ try { url = new URL(base); }
+ catch { throw Error(`MAGPIE_PI_BUN_MIRROR must be ${Object.keys(bunMirrors).join(", ")} or an HTTPS base URL`); }
+ if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash)
+  throw Error("MAGPIE_PI_BUN_MIRROR must be an HTTPS base URL without credentials, query or fragment");
+ return url.href.replace(/\/+$/, "");
+}
+
 const sumsByZip = Object.freeze({
  "bun-darwin-aarch64.zip": "90987a3a16d7db556d886ac3d551e7b6d3edf0a1cf43acaed622e8676be1d12f",
  "bun-darwin-x64.zip": "80520d7e17526308c9185d261679ac6d27798d3803a0e9f7ff9121ab8affb012",
@@ -102,7 +120,10 @@ function extract(zip) {
 
 async function install(exe, target, base, sums, fetcher) {
  const archive = target + ".zip";
- const zip = await download(`${base}/bun-v${BUN_VERSION}/${archive}`, fetcher);
+ const url = `${base}/bun-v${BUN_VERSION}/${archive}`;
+ let zip;
+ try { zip = await download(url, fetcher); }
+ catch (err) { throw Error(`download ${url} failed: ${err.message ?? err}${err.cause?.message ? ": " + err.cause.message : ""}`); }
  if (createHash("sha256").update(zip).digest("hex") !== sums[archive]) throw Error("SHA-256 checksum mismatch");
  const binary = extract(zip);
  const dir = path.dirname(exe);
@@ -126,7 +147,7 @@ async function install(exe, target, base, sums, fetcher) {
 }
 
 export async function ensureBun(state, {fetcher = fetch, override = process.env.MAGPIE_PI_BUN,
- base = "https://github.com/oven-sh/bun/releases/download", target, sums = sumsByZip} = {}) {
+ base, target, sums = sumsByZip} = {}) {
  if (override) return override;
  const exe = managedBunPath(state);
  try {
@@ -134,10 +155,10 @@ export async function ensureBun(state, {fetcher = fetch, override = process.env.
   target ??= bunTarget({platform: process.platform, arch: process.arch,
    musl: process.platform === "linux" && !process.report?.getReport?.()?.header?.glibcVersionRuntime});
   if (!pending.has(exe)) {
-   pending.set(exe, install(exe, target, base, sums, fetcher).finally(() => pending.delete(exe)));
+   pending.set(exe, install(exe, target, base ?? bunDownloadBase(), sums, fetcher).finally(() => pending.delete(exe)));
   }
   return await pending.get(exe);
  } catch (err) {
-  throw Error(`magpie-pi: could not get Bun ${BUN_VERSION} (${target ?? process.platform + "/" + process.arch}): ${err.message ?? err}. Set MAGPIE_PI_BUN to a Bun executable to use one you have.`);
+  throw Error(`magpie-pi: could not get Bun ${BUN_VERSION} (${target ?? process.platform + "/" + process.arch}): ${err.message ?? err}. Set MAGPIE_PI_BUN_MIRROR to download from a mirror, or MAGPIE_PI_BUN to use a Bun executable you have.`);
  }
 }

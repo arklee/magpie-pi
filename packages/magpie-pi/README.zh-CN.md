@@ -35,6 +35,7 @@ pi
 
 - `MAGPIE_PI_STATE`：指定其他状态目录，需使用绝对路径。
 - `MAGPIE_PI_BUN`：指定 Bun 可执行文件。
+- `MAGPIE_PI_BUN_MIRROR`：Bun 下载源，可选 `github`（默认）、`npmmirror`、`npmmirror-cdn`，或提供 `bun-v<版本>/<文件名>.zip` 的 HTTPS 基础地址。所有来源都按内置的 SHA-256 校验。
 - `/logout`：停用服务但不删除插件凭据；再次使用时执行 `/login`。
 
 ## 嵌入使用

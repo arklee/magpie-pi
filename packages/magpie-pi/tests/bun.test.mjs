@@ -5,7 +5,7 @@ import {mkdir, mkdtemp, readFile, readdir, rm, stat} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {deflateRawSync} from "node:zlib";
-import {BUN_VERSION, bunTarget, ensureBun, managedBunPath} from "../extension/bun.mjs";
+import {BUN_VERSION, bunDownloadBase, bunTarget, ensureBun, managedBunPath} from "../extension/bun.mjs";
 
 test("Bun release targets", () => {
  for (const [platform, arch, musl, expected] of [
@@ -83,10 +83,39 @@ test("checksum failure leaves no executable or parts and allows retry", async t 
  assert.equal(await ensureBun(state, options), exe);
 });
 
-test("HTTP failure includes override instructions", async t => {
+test("HTTP failure names the URL and includes override instructions", async t => {
  const {state, options} = await fixture(t);
  await assert.rejects(ensureBun(state, {...options, fetcher: () => new Response(null, {status: 503})}),
-  /could not get Bun 1\.4\.2 \(fixture-target\): HTTP 503\. Set MAGPIE_PI_BUN/);
+  /could not get Bun 1\.4\.2 \(fixture-target\): download https:\/\/fixture\.invalid\/bun-v1\.4\.2\/fixture-target\.zip failed: HTTP 503\. Set MAGPIE_PI_BUN_MIRROR .* MAGPIE_PI_BUN /);
+ await assert.rejects(ensureBun(state, {...options, fetcher: () => { throw new TypeError("fetch failed", {cause: Error("ETIMEDOUT")}); }}),
+  /fixture-target\.zip failed: fetch failed: ETIMEDOUT\./);
+});
+
+test("Bun download mirrors", () => {
+ assert.equal(bunDownloadBase(undefined), "https://github.com/oven-sh/bun/releases/download");
+ assert.equal(bunDownloadBase(" "), "https://github.com/oven-sh/bun/releases/download");
+ assert.equal(bunDownloadBase("github"), "https://github.com/oven-sh/bun/releases/download");
+ assert.equal(bunDownloadBase("npmmirror"), "https://registry.npmmirror.com/-/binary/bun");
+ assert.equal(bunDownloadBase("npmmirror-cdn"), "https://cdn.npmmirror.com/binaries/bun");
+ assert.equal(bunDownloadBase(" https://example.com/bun/// "), "https://example.com/bun");
+ for (const value of ["unknown", "http://example.com", "https://user:pass@example.com",
+  "https://example.com/?x=1", "https://example.com/#x"])
+  assert.throws(() => bunDownloadBase(value), /MAGPIE_PI_BUN_MIRROR must be/);
+});
+
+test("mirror from the environment is used and still checksum-verified", async t => {
+ const {state, options} = await fixture(t);
+ const saved = process.env.MAGPIE_PI_BUN_MIRROR;
+ t.after(() => { if (saved === undefined) delete process.env.MAGPIE_PI_BUN_MIRROR; else process.env.MAGPIE_PI_BUN_MIRROR = saved; });
+ process.env.MAGPIE_PI_BUN_MIRROR = "npmmirror";
+ const urls = [];
+ const {base, ...rest} = options;
+ await assert.rejects(ensureBun(state, {...rest, fetcher: async url => { urls.push(url); return new Response("tampered"); }}),
+  /checksum mismatch/);
+ assert.deepEqual(urls, [`https://registry.npmmirror.com/-/binary/bun/bun-v${BUN_VERSION}/fixture-target.zip`]);
+ process.env.MAGPIE_PI_BUN_MIRROR = "http://insecure.invalid";
+ await assert.rejects(ensureBun(state, rest), /MAGPIE_PI_BUN_MIRROR must be an HTTPS/);
+ assert.equal(await ensureBun(state, {...rest, override: "custom bun"}), "custom bun");
 });
 
 test("concurrent requests share one download", async t => {

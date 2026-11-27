@@ -15,7 +15,7 @@ node scripts/build.mjs
 pi install .
 ```
 
-Plugin installation and host startup share the pinned Bun in `state/bun/<version>/`. Checksums and platform targets are in `extension/bun.mjs`. Set `MAGPIE_PI_BUN` to use a local executable offline.
+Plugin installation and host startup share the pinned Bun in `state/bun/<version>/`. Checksums and platform targets are in `extension/bun.mjs`. Set `MAGPIE_PI_BUN` to use a local executable offline, or `MAGPIE_PI_BUN_MIRROR` to pick a download source (presets in `bunMirrors`; no automatic fallback between sources).
 
 Rebuild after Go source changes. Restart Pi after extension or host changes. For development dependencies, use the exact peer dependency versions in `package.json`.
 
