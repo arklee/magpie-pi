@@ -13,7 +13,7 @@ import {PluginManager} from "./plugins.mjs";
 import {createProviders,defaultState,loadConfig,startBridge} from "./providers.mjs";
 
 export {PluginManager,parse} from "./plugins.mjs";
-export {BUN_VERSION,bunDownloadBase,bunMirrors} from "./bun.mjs";
+export {BUN_VERSION,MIN_SYSTEM_BUN,findBun,bunDownloadBase,bunMirrors} from "./bun.mjs";
 
 export function prepareBun({state=defaultState(),mirror,onProgress}={}){
  return ensureBun(state,{mirror,onProgress});

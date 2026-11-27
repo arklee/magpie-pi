@@ -1,9 +1,44 @@
 import {createHash, randomUUID} from "node:crypto";
-import {chmod, lstat, mkdir, readdir, rename, rm, writeFile} from "node:fs/promises";
+import {chmod, realpath, stat, lstat, mkdir, readdir, rename, rm, writeFile} from "node:fs/promises";
+import {execFile} from "node:child_process";
+import os from "node:os";
+import {promisify} from "node:util";
 import path from "node:path";
 import * as zlib from "node:zlib";
 
 export const BUN_VERSION = "1.4.2";
+export const MIN_SYSTEM_BUN = "1.3.14";
+const run = promisify(execFile);
+
+export async function findBun({env = process.env, platform = process.platform, home = os.homedir(), runner = run} = {}) {
+ const windows = platform === "win32";
+ const paths = windows ? path.win32 : path.posix;
+ const dirs = (env.PATH || (windows && env.Path) || "").split(paths.delimiter);
+ if (env.BUN_INSTALL) dirs.push(paths.join(env.BUN_INSTALL, "bin"));
+ dirs.push(paths.join(home, ".bun", "bin"));
+ const seen = new Set();
+ let first;
+ const [, minMinor, minPatch] = MIN_SYSTEM_BUN.split(".").map(Number);
+ for (const dir of dirs) {
+  if (!paths.isAbsolute(dir)) continue;
+  const file = paths.join(dir, windows ? "bun.exe" : "bun");
+  try {
+   if (!(await stat(file)).isFile()) continue;
+   const resolved = await realpath(file);
+   if (seen.has(resolved)) continue;
+   seen.add(resolved);
+   const {stdout} = await runner(file, ["--version"], {timeout: 5000, windowsHide: true, maxBuffer: 4096});
+   const version = stdout.match(/\d+\.\d+\.\d+/)?.[0];
+   if (!version) continue;
+   const [major, minor, patch] = version.split(".").map(Number);
+   const found = {path: file, version, compatible: major === 1 && (minor > minMinor || minor === minMinor && patch >= minPatch)};
+   if (found.compatible) return found;
+   first ??= found;
+  } catch { continue; }
+ }
+ return first; // Only incompatible ones: report the first so the host can say why.
+}
+
 // Explicit download sources; every source is checked against the pinned SHA-256 sums below.
 export const bunMirrors = Object.freeze({
  github: "https://github.com/oven-sh/bun/releases/download",

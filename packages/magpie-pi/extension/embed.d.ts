@@ -19,6 +19,13 @@ export interface MagpieHost {
 /** Also sets MAGPIE_PI_EMBEDDED=1: the Pi extension stays inactive in this process. */
 export function startMagpie(options?: { state?: string; bun?: string; mirror?: string }): Promise<MagpieHost>;
 
+export const MIN_SYSTEM_BUN: "1.3.14";
+export function findBun(options?: {
+ env?: Record<string, string | undefined>;
+ platform?: NodeJS.Platform;
+ home?: string;
+ runner?: (file: string, args: string[], options: {timeout: number; windowsHide: boolean; maxBuffer: number}) => Promise<{stdout: string}>;
+}): Promise<{path: string; version: string; compatible: boolean} | undefined>;
 export const BUN_VERSION: string;
 export const bunMirrors: Readonly<Record<"github" | "npmmirror" | "npmmirror-cdn", string>>;
 export function bunDownloadBase(mirror?: string): string;

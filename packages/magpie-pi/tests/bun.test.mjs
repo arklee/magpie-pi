@@ -1,11 +1,11 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {mkdir, mkdtemp, readFile, readdir, rm, stat} from "node:fs/promises";
+import {writeFile, mkdir, mkdtemp, readFile, readdir, rm, stat} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {deflateRawSync} from "node:zlib";
-import {BUN_VERSION, bunDownloadBase, bunTarget, bunReady, ensureBun, managedBunPath} from "../extension/bun.mjs";
+import {BUN_VERSION, bunDownloadBase, bunTarget, bunReady, ensureBun, findBun, managedBunPath} from "../extension/bun.mjs";
 
 test("Bun release targets", () => {
  for (const [platform, arch, musl, expected] of [
@@ -144,4 +144,36 @@ test("installation reports bytes and makes Bun ready for embedding", async t => 
  const embed = await import("../extension/embed.mjs");
  assert.equal(await embed.bunReady({state}), true);
  assert.equal(await embed.prepareBun({state}), process.env.MAGPIE_PI_BUN || exe);
+});
+
+test("find installed Bun in search order", {skip: process.platform === "win32"}, async t => {
+ const home = await mkdtemp(path.join(os.tmpdir(), "bun-search-"));
+ t.after(() => rm(home, {recursive: true, force: true}));
+ const env = {};
+ const detect = runner => findBun({env, home, runner});
+ async function executable(dir, command) {
+  await mkdir(dir, {recursive: true});
+  const file = path.join(dir, "bun");
+  await writeFile(file, "#!/bin/sh\n" + command, {mode: 0o755});
+  return file;
+ }
+ assert.equal(await detect(), undefined);
+ env.BUN_INSTALL = home;
+ const install = await executable(path.join(home, "bin"), "echo 2.0.0");
+ // Only incompatible ones: the first is reported so the host can say why.
+ assert.deepEqual(await detect(), {path: install, version: "2.0.0", compatible: false});
+ const fallback = await executable(path.join(home, ".bun/bin"), "echo 1.3.14");
+ // A compatible Bun later in the search order beats an incompatible earlier one.
+ assert.deepEqual(await detect(), {path: fallback, version: "1.3.14", compatible: true});
+ const first = path.join(home, "first");
+ const second = path.join(home, "second");
+ env.PATH = [first, second].join(":");
+ await executable(first, "echo 1.2.0");
+ const b = await executable(second, "echo 1.4.2");
+ assert.deepEqual(await detect(), {path: b, version: "1.4.2", compatible: true});
+ const a = await executable(first, "echo 1.3.20");
+ assert.deepEqual(await detect(), {path: a, version: "1.3.20", compatible: true});
+ await executable(first, "exit 1");
+ assert.deepEqual(await detect(), {path: b, version: "1.4.2", compatible: true});
+ assert.equal((await detect(async () => ({stdout: "bun 1.3.15!"}))).version, "1.3.15");
 });

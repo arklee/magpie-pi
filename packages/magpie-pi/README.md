@@ -34,7 +34,7 @@ Third-party plugins run with your user privileges; install only plugins you trus
 Configuration is created automatically in `~/.local/share/magpie-pi`; manual JSON editing is not needed for menu-managed plugins.
 
 - `MAGPIE_PI_STATE`: override the state directory with an absolute path.
-- `MAGPIE_PI_BUN`: override the Bun executable.
+- `MAGPIE_PI_BUN`: override the Bun executable, for example to reuse an installed Bun instead of downloading one: `MAGPIE_PI_BUN=$(which bun)` (Bun 1.x, 1.3.14 or newer).
 - `MAGPIE_PI_BUN_MIRROR`: where to download Bun from: `github` (default), `npmmirror`, `npmmirror-cdn`, or an HTTPS base URL that serves `bun-v<version>/<file>.zip`. Downloads from every source are checked against pinned SHA-256 sums.
 - `/logout`: disables the provider without deleting plugin credentials; use `/login` to enable it again.
 
